@@ -1,4 +1,12 @@
-# bk-auth
+# Buildkite/Github OIDC bridge 
+
+Exposes an endpoint that allows Buildkite Agents to use an OIDC token to request
+a Github token in return. The GitHub token is created for the agent using a
+Github application that is created for the bridge and configured to allow access
+to the implementor's GitHub organization.
+
+The token is created with `contents:read` permissions on the repository
+associated with the executing pipeline.
 
 ## Configuration
 
@@ -6,25 +14,14 @@
   - refinement: can this stay in KMS perhaps?
 
 - Buildkite
-  -  API token (what scopes?)
+  - API token (what scopes?)
   - JWT verify
     - audience
     - issuer must be buildkite
     - JWKS url <- allows issuance from another source for testing
     - clock skew
 
-## Purpose
-
-Authenticated by Buildkite OIDC JWT, will issue a Github access token that has
-`contents:read` permissions on the currently executing pipeline's repository.
-
-Token is issued by Github application supplied by user. Token is issued for
-application, not for Github user.
-
-Returns the https repository url and the token for the pipeline. To use, likely
-that ssh will need redirection.
-
-## Functionality
+## Required functionality
 
 * stdout audit log:
   * JSON: repo, permissions, generated_at, issued_at, pipeline_slug,build_id, step_id
