@@ -16,7 +16,7 @@ import (
 )
 
 func configureServerRoutes(cfg config.Config) error {
-	authorizer, err := jwt.VerificationMiddleware(cfg.Authorization)
+	authorizer, err := jwt.Middleware(cfg.Authorization)
 	if err != nil {
 		return fmt.Errorf("authorizer configuration failed: %w", err)
 	}

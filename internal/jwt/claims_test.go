@@ -10,7 +10,6 @@ import (
 func TestBuildkiteClaims_Validate(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		claims := &BuildkiteClaims{
-			Audience:                 "audience",
 			OrganizationSlug:         "org",
 			PipelineSlug:             "pipeline",
 			BuildNumber:              "123",
@@ -38,7 +37,6 @@ func TestBuildkiteClaims_Validate(t *testing.T) {
 
 	t.Run("wrong org", func(t *testing.T) {
 		claims := &BuildkiteClaims{
-			Audience:     "audience",
 			PipelineSlug: "pipeline",
 			BuildNumber:  "123",
 			BuildBranch:  "main",

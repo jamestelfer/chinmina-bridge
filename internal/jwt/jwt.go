@@ -16,10 +16,10 @@ import (
 	"github.com/jamestelfer/ghauth/internal/config"
 )
 
-// VerificationMiddleware returns HTTP middleware that verifies the JWT and
+// Middleware returns HTTP middleware that verifies the JWT and
 // enforces the validity claims. The retrieved claims are set on the request
 // context and can be retrieved by calling jwt.ClaimsFromContext(ctx).
-func VerificationMiddleware(cfg config.AuthorizationConfig) (func(http.Handler) http.Handler, error) {
+func Middleware(cfg config.AuthorizationConfig, options ...jwtmiddleware.Option) (func(http.Handler) http.Handler, error) {
 	// allow for static configuration when testing
 	jwksConfig := remoteJWKS
 	if cfg.ConfigurationStatic != "" {
@@ -47,7 +47,11 @@ func VerificationMiddleware(cfg config.AuthorizationConfig) (func(http.Handler) 
 		return nil, fmt.Errorf("failed to set up the validator: %v", err)
 	}
 
-	return jwtmiddleware.New(jwtValidator.ValidateToken).CheckJWT, nil
+	// wrap the standard validator with additional validaton that ensures the
+	// core claims (including validity periods) are present
+	tokenValidator := registeredClaimsValidator(jwtValidator.ValidateToken)
+
+	return jwtmiddleware.New(tokenValidator, options...).CheckJWT, nil
 }
 
 // ClaimsFromContext returns the validated claims from the context as set by the

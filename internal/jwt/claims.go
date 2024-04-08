@@ -5,17 +5,55 @@ import (
 	"fmt"
 	"strings"
 
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 )
+
+// registeredClaimsValidator ensures that the basic claims that we rely on are
+// part of the supplied claims. It also ensures that the the token has a valid
+// time period. The core validation takes care of enforcing the active and
+// expiry dates: this simply ensures that they're present.
+func registeredClaimsValidator(next jwtmiddleware.ValidateToken) jwtmiddleware.ValidateToken {
+	return func(ctx context.Context, token string) (interface{}, error) {
+
+		claims, err := next(ctx, token)
+		if err != nil {
+			return nil, err
+		}
+
+		validatedClaims, ok := claims.(*validator.ValidatedClaims)
+		if !ok {
+			return nil, fmt.Errorf("could not cast claims to validator.ValidatedClaims")
+			// return claims, err
+		}
+
+		reg := validatedClaims.RegisteredClaims
+
+		if len(reg.Audience) == 0 {
+			return nil, fmt.Errorf("audience claim not present")
+		}
+
+		if reg.Issuer == "" {
+			return nil, fmt.Errorf("issuer claim not present")
+		}
+
+		if reg.Subject == "" {
+			return nil, fmt.Errorf("subject claim not present")
+		}
+
+		if reg.NotBefore == 0 || reg.Expiry == 0 {
+			return nil, fmt.Errorf("token has no validity period")
+		}
+
+		return claims, nil
+	}
+}
 
 // BuildkiteClaims define the additional claims that Builkite includes in the
 // JWT.
 //
 // See: https://buildkite.com/docs/agent/v3/cli-oidc#claims
 type BuildkiteClaims struct {
-	// Audience is a registered claim, so will be returned regardless. Adding it
-	// here however allows us to validate that it's present with less ceremony.
-	Audience         string `json:"aud"`
 	OrganizationSlug string `json:"organization_slug"`
 	PipelineSlug     string `json:"pipeline_slug"`
 	BuildNumber      string `json:"build_number"`
@@ -34,7 +72,6 @@ type BuildkiteClaims struct {
 func (c *BuildkiteClaims) Validate(ctx context.Context) error {
 
 	fields := [][]string{
-		{"aud", c.Audience},
 		{"organization_slug", c.OrganizationSlug},
 		{"pipeline_slug", c.PipelineSlug},
 		{"build_number", c.BuildNumber},
