@@ -8,12 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/justinas/alice"
 )
 
-func configureServerRoutes() {
-	// FIXME add auth middleware for Buildkite JWT
+func configureServerRoutes(cfg Config) {
+	authorizer := jwtVerificationMiddleware(cfg.Authorization)
 
-	http.HandleFunc("POST /token", handlePostToken)
+	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken()))
 }
 
 func main() {
@@ -30,7 +32,7 @@ func launchServer() error {
 		return fmt.Errorf("configuration load failed: %w", err)
 	}
 
-	configureServerRoutes()
+	configureServerRoutes(cfg)
 
 	err = serveHTTP(cfg.Server)
 	if err != nil {
