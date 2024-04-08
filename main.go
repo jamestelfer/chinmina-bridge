@@ -11,30 +11,46 @@ import (
 )
 
 func configureServerRoutes() {
+	// FIXME add auth middleware for Buildkite JWT
+
 	http.HandleFunc("POST /token", handlePostToken)
 }
 
 func main() {
-	configureServerRoutes()
-
-	err := serveHTTP()
+	err := launchServer()
 	if err != nil {
 		fmt.Printf("server failed: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func serveHTTP() error {
+func launchServer() error {
+	cfg, err := loadConfig(context.Background())
+	if err != nil {
+		return fmt.Errorf("configuration load failed: %w", err)
+	}
+
+	configureServerRoutes()
+
+	err = serveHTTP(cfg.Port)
+	if err != nil {
+		return fmt.Errorf("server failed: %w", err)
+	}
+
+	return nil
+}
+
+func serveHTTP(port int) error {
 	// Setup signal handling
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT)
 
-	// TODO: config port
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
 
 	// Start the server in a new goroutine
 	var serverErr error
 	go func() {
+		fmt.Printf("Starting server on port %d\n", port)
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)
