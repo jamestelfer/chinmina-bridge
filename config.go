@@ -7,6 +7,10 @@ import (
 )
 
 type Config struct {
+	Server        ServerConfig
+}
+
+type ServerConfig struct {
 	Port int `env:"PORT, default=8080"`
 }
 

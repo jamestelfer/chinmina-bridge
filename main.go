@@ -32,7 +32,7 @@ func launchServer() error {
 
 	configureServerRoutes()
 
-	err = serveHTTP(cfg.Port)
+	err = serveHTTP(cfg.Server)
 	if err != nil {
 		return fmt.Errorf("server failed: %w", err)
 	}
@@ -40,17 +40,17 @@ func launchServer() error {
 	return nil
 }
 
-func serveHTTP(port int) error {
+func serveHTTP(serverCfg ServerConfig) error {
 	// Setup signal handling
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT)
 
-	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	server := &http.Server{Addr: fmt.Sprintf(":%d", serverCfg.Port)}
 
 	// Start the server in a new goroutine
 	var serverErr error
 	go func() {
-		fmt.Printf("Starting server on port %d\n", port)
+		fmt.Printf("Starting server on port %d\n", serverCfg.Port)
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)
