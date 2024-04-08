@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"context"
@@ -21,7 +21,7 @@ type AuthorizationConfig struct {
 	ConfigurationURL          string `env:"JWT_JWKS_URL, default=https://buildkite.com/.well-known/jwks"`
 }
 
-func loadConfig(ctx context.Context) (cfg Config, err error) {
+func Load(ctx context.Context) (cfg Config, err error) {
 	err = envconfig.Process(ctx, &cfg)
 	return
 }

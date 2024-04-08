@@ -9,13 +9,21 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/ghauth/internal/jwt"
+
 	"github.com/justinas/alice"
 )
 
-func configureServerRoutes(cfg Config) {
-	authorizer := jwtVerificationMiddleware(cfg.Authorization)
+func configureServerRoutes(cfg config.Config) error {
+	authorizer, err := jwt.VerificationMiddleware(cfg.Authorization)
+	if err != nil {
+		return fmt.Errorf("authorizer configuration failed: %w", err)
+	}
 
 	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken()))
+
+	return nil
 }
 
 func main() {
@@ -27,12 +35,15 @@ func main() {
 }
 
 func launchServer() error {
-	cfg, err := loadConfig(context.Background())
+	cfg, err := config.Load(context.Background())
 	if err != nil {
 		return fmt.Errorf("configuration load failed: %w", err)
 	}
 
-	configureServerRoutes(cfg)
+	err = configureServerRoutes(cfg)
+	if err != nil {
+		return fmt.Errorf("server routing configuration failed: %w", err)
+	}
 
 	err = serveHTTP(cfg.Server)
 	if err != nil {
@@ -42,8 +53,8 @@ func launchServer() error {
 	return nil
 }
 
-func serveHTTP(serverCfg ServerConfig) error {
-	// Setup signal handling
+func serveHTTP(serverCfg config.ServerConfig) error {
+	// capture signals to gracefully shutdown the server
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT)
 
