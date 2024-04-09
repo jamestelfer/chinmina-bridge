@@ -12,11 +12,15 @@ require (
 
 require (
 	github.com/cenkalti/backoff v1.1.1-0.20171020064038-309aa717adbf // indirect
-	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/google/go-github/v60 v60.0.0 // indirect
+	github.com/google/go-github/v61 v61.0.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 )
 
 require (
+	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/buildkite/go-buildkite/v3 v3.11.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

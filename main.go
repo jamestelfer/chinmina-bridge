@@ -12,23 +12,27 @@ import (
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/jamestelfer/ghauth/internal/buildkite"
 	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/ghauth/internal/github"
 	"github.com/jamestelfer/ghauth/internal/jwt"
 
 	"github.com/justinas/alice"
 )
 
 func configureServerRoutes(cfg config.Config) error {
+	// configure middleware
 	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
 	if err != nil {
 		return fmt.Errorf("authorizer configuration failed: %w", err)
 	}
 
+	// setup token handler and dependencies
 	bk := buildkite.New(cfg.Buildkite)
-	gh := func(ctx context.Context, repositoryURL string) (string, error) {
-		return "token for " + repositoryURL, nil
+	gh, err := github.New(cfg.Github)
+	if err != nil {
+		return fmt.Errorf("github configuratino failed: %w", err)
 	}
 
-	vendor := IssueTokenForPipeline(bk.RepositoryLookup, gh)
+	vendor := IssueTokenForPipeline(bk.RepositoryLookup, gh.CreateAccessToken)
 
 	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken(vendor)))
 

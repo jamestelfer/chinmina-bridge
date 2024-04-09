@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Authorization AuthorizationConfig
 	Buildkite     BuildkiteConfig
+	Github        GithubConfig
 	Server        ServerConfig
 }
 
@@ -25,6 +26,12 @@ type AuthorizationConfig struct {
 
 type BuildkiteConfig struct {
 	Token string `env:"BUILDKITE_API_TOKEN, required"`
+}
+
+type GithubConfig struct {
+	PrivateKey     string `env:"GITHUB_APP_PRIVATE_KEY, required"`
+	ApplicationID  int64  `env:"GITHUB_APP_ID, required"`
+	InstallationID int64  `env:"GITHUB_APP_INSTALLATION_ID, required"`
 }
 
 func Load(ctx context.Context) (cfg Config, err error) {
