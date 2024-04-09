@@ -14,7 +14,7 @@ associated with the executing pipeline.
   - refinement: can this stay in KMS perhaps?
 
 - Buildkite
-  - API token (what scopes?)
+  - API token (what scopes?) choose organization, REST `read_pipelines`, no GraphQL
   - JWT verify
     - audience
     - issuer must be buildkite
