@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Server        ServerConfig
 	Authorization AuthorizationConfig
+	Buildkite     BuildkiteConfig
+	Server        ServerConfig
 }
 
 type ServerConfig struct {
@@ -20,6 +21,10 @@ type AuthorizationConfig struct {
 	BuildkiteOrganizationSlug string `env:"JWT_BUILDKITE_ORGANIZATION_SLUG, required"`
 	ConfigurationURL          string `env:"JWT_JWKS_URL, default=https://buildkite.com/.well-known/jwks"`
 	ConfigurationStatic       string `env:"JWT_JWKS_STATIC"`
+}
+
+type BuildkiteConfig struct {
+	Token string `env:"BUILDKITE_API_TOKEN, required"`
 }
 
 func Load(ctx context.Context) (cfg Config, err error) {

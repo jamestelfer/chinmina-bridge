@@ -29,6 +29,7 @@ func handlePostToken(vendor PipelineTokenVendor) http.Handler {
 
 		tokenResponse, err := vendor(r.Context(), *claims)
 		if err != nil {
+			fmt.Printf("token creation failed %v", err)
 			requestError(w, http.StatusInternalServerError)
 			return
 		}

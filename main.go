@@ -10,6 +10,7 @@ import (
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
+	"github.com/jamestelfer/ghauth/internal/buildkite"
 	"github.com/jamestelfer/ghauth/internal/config"
 	"github.com/jamestelfer/ghauth/internal/jwt"
 
@@ -22,14 +23,16 @@ func configureServerRoutes(cfg config.Config) error {
 		return fmt.Errorf("authorizer configuration failed: %w", err)
 	}
 
-	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken(fake)))
+	bk := buildkite.New(cfg.Buildkite)
+	gh := func(ctx context.Context, repositoryURL string) (string, error) {
+		return "token for " + repositoryURL, nil
+	}
+
+	vendor := IssueTokenForPipeline(bk.RepositoryLookup, gh)
+
+	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken(vendor)))
 
 	return nil
-}
-
-func fake(ctx context.Context, claims jwt.BuildkiteClaims) (PipelineRepositoryToken, error) {
-	fmt.Printf("%+v", claims)
-	return PipelineRepositoryToken{}, nil
 }
 
 func main() {
