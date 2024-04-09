@@ -38,3 +38,6 @@ associated with the executing pipeline.
   * cached?
   * request status
 
+## Generating test keys
+
+Use [https://mkjwk.org], save private and public to `.development/keys`. Good enough for test credentials.
