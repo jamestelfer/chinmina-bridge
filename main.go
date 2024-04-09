@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/jamestelfer/ghauth/internal/config"
 	"github.com/jamestelfer/ghauth/internal/jwt"
 
@@ -16,14 +17,19 @@ import (
 )
 
 func configureServerRoutes(cfg config.Config) error {
-	authorizer, err := jwt.Middleware(cfg.Authorization)
+	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
 	if err != nil {
 		return fmt.Errorf("authorizer configuration failed: %w", err)
 	}
 
-	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken()))
+	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken(fake)))
 
 	return nil
+}
+
+func fake(ctx context.Context, claims jwt.BuildkiteClaims) (PipelineRepositoryToken, error) {
+	fmt.Printf("%+v", claims)
+	return PipelineRepositoryToken{}, nil
 }
 
 func main() {

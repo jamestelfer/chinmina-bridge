@@ -54,6 +54,14 @@ func Middleware(cfg config.AuthorizationConfig, options ...jwtmiddleware.Option)
 	return jwtmiddleware.New(tokenValidator, options...).CheckJWT, nil
 }
 
+func LogErrorHandler() jwtmiddleware.ErrorHandler {
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		fmt.Printf("error handler called: %s, %v\n", err.Error(), err)
+
+		jwtmiddleware.DefaultErrorHandler(w, r, err)
+	}
+}
+
 // ClaimsFromContext returns the validated claims from the context as set by the
 // JWT middleware. This will return nil if the context data is not set. This
 // should be regarded as an error for handlers that expect the claims to be
@@ -61,6 +69,19 @@ func Middleware(cfg config.AuthorizationConfig, options ...jwtmiddleware.Option)
 func ClaimsFromContext(ctx context.Context) *validator.ValidatedClaims {
 	claims, _ := ctx.Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims)
 	return claims
+}
+
+// Get the custom Buildkite claims from the context, as added by the JWT
+// middleware. This will return nil if the claims are not present.
+func BuildkiteClaimsFromContext(ctx context.Context) *BuildkiteClaims {
+	claims := ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil
+	}
+
+	bkClaims, _ := claims.CustomClaims.(*BuildkiteClaims)
+
+	return bkClaims
 }
 
 type KeyFunc = func(ctx context.Context) (any, error)
