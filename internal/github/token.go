@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v61/github"
@@ -44,10 +45,10 @@ func New(cfg config.GithubConfig) (Client, error) {
 	}, nil
 }
 
-func (c Client) CreateAccessToken(ctx context.Context, repositoryURL string) (string, error) {
+func (c Client) CreateAccessToken(ctx context.Context, repositoryURL string) (string, time.Time, error) {
 	u, err := url.Parse(repositoryURL)
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
 
 	qualifiedIdentifier, _ := strings.CutSuffix(u.Path, ".git")
@@ -62,8 +63,27 @@ func (c Client) CreateAccessToken(ctx context.Context, repositoryURL string) (st
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
 
-	return tok.GetToken(), nil
+	return tok.GetToken(), tok.GetExpiresAt().Time, nil
+}
+
+func RepoForURL(u url.URL) (string, string) {
+	if u.Hostname() != "github.com" || u.Path == "" {
+		return "", ""
+	}
+
+	return RepoForPath(u.Path)
+}
+
+func RepoForPath(path string) (string, string) {
+	path, _ = strings.CutSuffix(path, ".git")
+	qualified, _ := strings.CutPrefix(path, "/")
+	org, repo, ok := strings.Cut(qualified, "/")
+	if !ok {
+		return "", ""
+	}
+
+	return org, repo
 }

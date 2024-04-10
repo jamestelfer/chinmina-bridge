@@ -25,16 +25,19 @@ func configureServerRoutes(cfg config.Config) error {
 		return fmt.Errorf("authorizer configuration failed: %w", err)
 	}
 
+	authorized := alice.New(authorizer)
+
 	// setup token handler and dependencies
 	bk := buildkite.New(cfg.Buildkite)
 	gh, err := github.New(cfg.Github)
 	if err != nil {
-		return fmt.Errorf("github configuratino failed: %w", err)
+		return fmt.Errorf("github configuration failed: %w", err)
 	}
 
 	vendor := IssueTokenForPipeline(bk.RepositoryLookup, gh.CreateAccessToken)
 
-	http.Handle("POST /token", alice.New(authorizer).Then(handlePostToken(vendor)))
+	http.Handle("POST /token", authorized.Then(handlePostToken(vendor)))
+	http.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(vendor)))
 
 	return nil
 }
