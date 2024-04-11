@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,6 +16,8 @@ import (
 	"github.com/jamestelfer/ghauth/internal/config"
 	"github.com/jamestelfer/ghauth/internal/github"
 	"github.com/jamestelfer/ghauth/internal/jwt"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/justinas/alice"
 )
@@ -43,10 +47,17 @@ func configureServerRoutes(cfg config.Config) error {
 }
 
 func main() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if os.Getenv("ENV") == "development" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	logBuildInfo()
+
 	err := launchServer()
 	if err != nil {
-		fmt.Printf("server failed: %v\n", err)
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("server failed to start")
 	}
 }
 
@@ -79,10 +90,10 @@ func serveHTTP(serverCfg config.ServerConfig) error {
 	// Start the server in a new goroutine
 	var serverErr error
 	go func() {
-		fmt.Printf("Starting server on port %d\n", serverCfg.Port)
+		log.Info().Int("port", serverCfg.Port).Msg("starting server")
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			fmt.Printf("Error starting server: %v\n", err)
+			log.Error().Err(err).Msg("failed to start server")
 			serverErr = err
 
 			// signal the main goroutine to exit gracefully
@@ -91,7 +102,7 @@ func serveHTTP(serverCfg config.ServerConfig) error {
 	}()
 
 	sig := <-signalChan
-	fmt.Printf("Received server shutdown signal: %v\n", sig)
+	log.Info().Stringer("signal", sig).Msg("server shutdown requested")
 
 	// Gracefully stop the server, allow up to 25 seconds for in-flight requests to complete
 	// TODO config timeout
@@ -109,4 +120,22 @@ func serveHTTP(serverCfg config.ServerConfig) error {
 	// if shutdown is successful but startup failed, the process should exit
 	// with an error
 	return serverErr
+}
+
+func logBuildInfo() {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	ev := log.Info()
+	for _, v := range buildInfo.Settings {
+
+		if strings.HasPrefix(v.Key, "vcs.") ||
+			strings.HasPrefix(v.Key, "GO") ||
+			v.Key == "CGO_ENABLED" {
+			ev = ev.Str(v.Key, v.Value)
+		}
+	}
+
+	ev.Msg("build information")
 }

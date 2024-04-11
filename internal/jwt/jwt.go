@@ -11,6 +11,7 @@ import (
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/go-jose/go-jose.v2"
 
 	"github.com/jamestelfer/ghauth/internal/config"
@@ -56,7 +57,9 @@ func Middleware(cfg config.AuthorizationConfig, options ...jwtmiddleware.Option)
 
 func LogErrorHandler() jwtmiddleware.ErrorHandler {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
-		fmt.Printf("error handler called: %s, %v\n", err.Error(), err)
+		log.Warn().
+			Err(err).
+			Msg("JWT decode failure")
 
 		jwtmiddleware.DefaultErrorHandler(w, r, err)
 	}

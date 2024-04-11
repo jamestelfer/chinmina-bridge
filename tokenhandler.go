@@ -12,6 +12,7 @@ import (
 
 	"github.com/jamestelfer/ghauth/internal/credentialhandler"
 	"github.com/jamestelfer/ghauth/internal/jwt"
+	"github.com/rs/zerolog/log"
 )
 
 type PipelineTokenVendor func(ctx context.Context, claims jwt.BuildkiteClaims, repo string) (*PipelineRepositoryToken, error)
@@ -34,7 +35,7 @@ func handlePostToken(vendor PipelineTokenVendor) http.Handler {
 
 		tokenResponse, err := vendor(r.Context(), *claims, "")
 		if err != nil {
-			fmt.Printf("token creation failed %v\n", err)
+			log.Info().Msgf("token creation failed %v\n", err)
 			requestError(w, http.StatusInternalServerError)
 			return
 		}
@@ -52,7 +53,7 @@ func handlePostToken(vendor PipelineTokenVendor) http.Handler {
 		if err != nil {
 			// record failure to log: trying to respond to the client at this
 			// point will likely fail
-			fmt.Printf("failed to write response: %v\n", err)
+			log.Info().Msgf("failed to write response: %v\n", err)
 			return
 		}
 	})
@@ -73,7 +74,7 @@ func handlePostGitCredentials(vendor PipelineTokenVendor) http.Handler {
 
 		requestedRepo, err := credentialhandler.ReadProperties(r.Body)
 		if err != nil {
-			fmt.Printf("read repository properties from client failed %v\n", err)
+			log.Info().Msgf("read repository properties from client failed %v\n", err)
 			requestError(w, http.StatusInternalServerError)
 			return
 		}
@@ -91,7 +92,7 @@ func handlePostGitCredentials(vendor PipelineTokenVendor) http.Handler {
 
 		tokenResponse, err := vendor(r.Context(), *claims, u.String())
 		if err != nil {
-			fmt.Printf("token creation failed %v\n", err)
+			log.Info().Msgf("token creation failed %v\n", err)
 			requestError(w, http.StatusInternalServerError)
 			return
 		}
@@ -116,7 +117,7 @@ func handlePostGitCredentials(vendor PipelineTokenVendor) http.Handler {
 			"password_expiry_utc": tokenResponse.ExpiryUnix(),
 		}, w)
 		if err != nil {
-			fmt.Printf("failed to write response: %v\n", err)
+			log.Info().Msgf("failed to write response: %v\n", err)
 			requestError(w, http.StatusInternalServerError)
 			return
 		}
@@ -170,7 +171,7 @@ func IssueTokenForPipeline(
 			// git is asking for a different repo than we can handle: return nil
 			// to indicate that the handler should return a successful (but
 			// empty) response.
-			fmt.Printf("no token issued: repo mismatch. pipeline(%s) != requested(%s)\n", pipelineRepoURL, requestedRepoURL)
+			log.Info().Msgf("no token issued: repo mismatch. pipeline(%s) != requested(%s)\n", pipelineRepoURL, requestedRepoURL)
 			return nil, nil
 		}
 
@@ -179,6 +180,12 @@ func IssueTokenForPipeline(
 		if err != nil {
 			return nil, fmt.Errorf("could not issue token for repository %s: %w", pipelineRepoURL, err)
 		}
+
+		log.Info().
+			Str("organization", claims.OrganizationSlug).
+			Str("pipeline", claims.PipelineSlug).
+			Str("repo", requestedRepoURL).
+			Msg("token issued")
 
 		return &PipelineRepositoryToken{
 			OrganizationSlug: claims.OrganizationSlug,
