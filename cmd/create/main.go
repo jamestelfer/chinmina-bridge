@@ -53,7 +53,7 @@ func main() {
 	}), localjwt.BuildkiteClaims{
 		OrganizationSlug: cfg.OrganizationSlug,
 		PipelineSlug:     cfg.PipelineSlug,
-		BuildNumber:      "123",
+		BuildNumber:      123,
 		BuildBranch:      "main",
 		BuildCommit:      "abc123",
 		StepKey:          "step1",
