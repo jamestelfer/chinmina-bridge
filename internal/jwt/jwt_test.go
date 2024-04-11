@@ -155,7 +155,7 @@ func valid(claims jwt.Claims) jwt.Claims {
 
 func custom(org, pipeline string) BuildkiteClaims {
 	claims := BuildkiteClaims{
-		BuildNumber: "default-buildnumber",
+		BuildNumber: 0,
 		BuildBranch: "default-buildbranch",
 		BuildCommit: "default-buildcommit",
 		StepKey:     "default-stepkey",

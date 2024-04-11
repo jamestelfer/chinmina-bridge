@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -24,7 +25,6 @@ func registeredClaimsValidator(next jwtmiddleware.ValidateToken) jwtmiddleware.V
 		validatedClaims, ok := claims.(*validator.ValidatedClaims)
 		if !ok {
 			return nil, fmt.Errorf("could not cast claims to validator.ValidatedClaims")
-			// return claims, err
 		}
 
 		reg := validatedClaims.RegisteredClaims
@@ -56,7 +56,7 @@ func registeredClaimsValidator(next jwtmiddleware.ValidateToken) jwtmiddleware.V
 type BuildkiteClaims struct {
 	OrganizationSlug string `json:"organization_slug"`
 	PipelineSlug     string `json:"pipeline_slug"`
-	BuildNumber      string `json:"build_number"`
+	BuildNumber      int    `json:"build_number"`
 	BuildBranch      string `json:"build_branch"`
 	BuildTag         string `json:"build_tag"`
 	BuildCommit      string `json:"build_commit"`
@@ -74,10 +74,10 @@ func (c *BuildkiteClaims) Validate(ctx context.Context) error {
 	fields := [][]string{
 		{"organization_slug", c.OrganizationSlug},
 		{"pipeline_slug", c.PipelineSlug},
-		{"build_number", c.BuildNumber},
+		{"build_number", strconv.Itoa(c.BuildNumber)},
 		{"build_branch", c.BuildBranch},
 		{"build_commit", c.BuildCommit},
-		{"step_key", c.StepKey},
+		// step_key may be nil
 		{"job_id", c.JobId},
 		{"agent_id", c.AgentId},
 	}
