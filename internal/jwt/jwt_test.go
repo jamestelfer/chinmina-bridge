@@ -113,7 +113,7 @@ func TestMiddleware(t *testing.T) {
 			}
 			cfg := config.AuthorizationConfig{
 				Audience:                  audience,
-				ConfigurationURL:          testServer.URL,
+				IssuerURL:                 testServer.URL,
 				BuildkiteOrganizationSlug: expectedOrganizationSlug,
 			}
 

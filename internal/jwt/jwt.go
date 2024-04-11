@@ -90,7 +90,7 @@ func BuildkiteClaimsFromContext(ctx context.Context) *BuildkiteClaims {
 type KeyFunc = func(ctx context.Context) (any, error)
 
 func remoteJWKS(cfg config.AuthorizationConfig) (url.URL, KeyFunc, error) {
-	issuerURL, err := url.Parse(cfg.ConfigurationURL)
+	issuerURL, err := url.Parse(cfg.IssuerURL)
 	if err != nil {
 		return url.URL{}, nil, fmt.Errorf("failed to parse the issuer URL: %w", err)
 	}
@@ -101,7 +101,7 @@ func remoteJWKS(cfg config.AuthorizationConfig) (url.URL, KeyFunc, error) {
 }
 
 func staticJWKS(cfg config.AuthorizationConfig) (url.URL, KeyFunc, error) {
-	issuerURL, err := url.Parse(cfg.ConfigurationURL)
+	issuerURL, err := url.Parse(cfg.IssuerURL)
 	if err != nil {
 		return url.URL{}, nil, fmt.Errorf("failed to parse the issuer URL: %w", err)
 	}

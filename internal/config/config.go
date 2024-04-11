@@ -20,7 +20,7 @@ type ServerConfig struct {
 type AuthorizationConfig struct {
 	Audience                  string `env:"JWT_AUDIENCE, default=app-token-issuer"`
 	BuildkiteOrganizationSlug string `env:"JWT_BUILDKITE_ORGANIZATION_SLUG, required"`
-	ConfigurationURL          string `env:"JWT_JWKS_URL, default=https://buildkite.com/.well-known/jwks"`
+	IssuerURL                 string `env:"JWT_ISSUER_URL, default=https://agent.buildkite.com"`
 	ConfigurationStatic       string `env:"JWT_JWKS_STATIC"`
 }
 
