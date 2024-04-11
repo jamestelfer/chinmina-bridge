@@ -2,3 +2,5 @@
 
 .development/*/*
 !.development/**/.gitkeep
+
+dist/
