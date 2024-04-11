@@ -1,0 +1,22 @@
+services:
+  buildkite-agent:
+    image: buildkite/agent:3
+    command: [ "start" ]
+    environment:
+      - BUILDKITE_AGENT_TOKEN
+
+  vendor:
+    image: alpine
+    working_dir: "/src"
+    command: [ "./vendor" ]
+    environment:
+      - ENV=development
+      - PORT=80
+      - BUILDKITE_API_TOKEN
+      - JWT_BUILDKITE_ORGANIZATION_SLUG
+      - JWT_AUDIENCE=github-app-auth:jamestelfer
+      - GITHUB_APP_PRIVATE_KEY
+      - GITHUB_APP_ID
+      - GITHUB_APP_INSTALLATION_ID
+    volumes:
+      - "..:/src"
