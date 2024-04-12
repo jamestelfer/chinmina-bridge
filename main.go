@@ -47,11 +47,7 @@ func configureServerRoutes(cfg config.Config) error {
 }
 
 func main() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if os.Getenv("ENV") == "development" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
+	configureLogging()
 
 	logBuildInfo()
 
@@ -120,6 +116,14 @@ func serveHTTP(serverCfg config.ServerConfig) error {
 	// if shutdown is successful but startup failed, the process should exit
 	// with an error
 	return serverErr
+}
+
+func configureLogging() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if os.Getenv("ENV") == "development" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
 }
 
 func logBuildInfo() {
