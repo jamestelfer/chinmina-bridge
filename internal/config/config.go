@@ -14,7 +14,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `env:"PORT, default=8080"`
+	Port                   int `env:"SERVER_PORT, default=8080"`
+	ShutdownTimeoutSeconds int `env:"SERVER_SHUTDOWN_TIMEOUT_SECS, default=25"`
 }
 
 type AuthorizationConfig struct {

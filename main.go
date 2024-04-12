@@ -105,8 +105,8 @@ func serveHTTP(serverCfg config.ServerConfig) error {
 	log.Info().Stringer("signal", sig).Msg("server shutdown requested")
 
 	// Gracefully stop the server, allow up to 25 seconds for in-flight requests to complete
-	// TODO config timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	shutdownTimeout := time.Duration(serverCfg.ShutdownTimeoutSeconds) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer func() {
 		// additional shutdown handling if required
 		cancel()
