@@ -38,7 +38,12 @@ func configureServerRoutes(cfg config.Config) error {
 		return fmt.Errorf("github configuration failed: %w", err)
 	}
 
-	vendor := IssueTokenForPipeline(bk.RepositoryLookup, gh.CreateAccessToken)
+	vendorCache, err := newCachedPipelineTokenVendor()
+	if err != nil {
+		return fmt.Errorf("vendor cache configuration failed: %w", err)
+	}
+
+	vendor := vendorCache(IssueTokenForPipeline(bk.RepositoryLookup, gh.CreateAccessToken))
 
 	http.Handle("POST /token", authorized.Then(handlePostToken(vendor)))
 	http.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(vendor)))

@@ -12,6 +12,7 @@ func TestBuildkiteClaims_Validate(t *testing.T) {
 		claims := &BuildkiteClaims{
 			OrganizationSlug:         "org",
 			PipelineSlug:             "pipeline",
+			PipelineID:               "pipeline_uuid",
 			BuildNumber:              123,
 			BuildBranch:              "main",
 			BuildCommit:              "abc123",
@@ -38,6 +39,7 @@ func TestBuildkiteClaims_Validate(t *testing.T) {
 	t.Run("wrong org", func(t *testing.T) {
 		claims := &BuildkiteClaims{
 			PipelineSlug: "pipeline",
+			PipelineID:   "pipeline_uuid",
 			BuildNumber:  123,
 			BuildBranch:  "main",
 			BuildCommit:  "abc123",

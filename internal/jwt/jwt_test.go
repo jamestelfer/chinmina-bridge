@@ -165,6 +165,7 @@ func custom(org, pipeline string) BuildkiteClaims {
 
 	claims.OrganizationSlug = org
 	claims.PipelineSlug = pipeline
+	claims.PipelineID = pipeline + "--UUID"
 
 	return claims
 }
@@ -235,8 +236,9 @@ func createRequestJWT(t *testing.T, jwk *jose.JSONWebKey, issuer string, claims 
 	})
 
 	token, err := builder.CompactSerialize()
-
 	require.NoError(t, err)
+
+	t.Logf("issued token=%s", token)
 
 	return token
 }

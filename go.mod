@@ -6,6 +6,7 @@ require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.1
 	github.com/google/go-github/v61 v61.0.0
 	github.com/justinas/alice v1.2.0
+	github.com/maypok86/otter v1.2.0
 	github.com/rs/zerolog v1.32.0
 	github.com/sethvargo/go-envconfig v1.0.1
 	github.com/stretchr/testify v1.9.0
@@ -14,6 +15,8 @@ require (
 
 require (
 	github.com/cenkalti/backoff v1.1.1-0.20171020064038-309aa717adbf // indirect
+	github.com/dolthub/maphash v0.1.0 // indirect
+	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/google/go-github/v60 v60.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
