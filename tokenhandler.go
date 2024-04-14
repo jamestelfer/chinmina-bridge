@@ -108,10 +108,17 @@ func handlePostGitCredentials(vendor PipelineTokenVendor) http.Handler {
 		}
 
 		// write the reponse to the client in git credentials property format
+		tokenURL, err := tokenResponse.URL()
+		if err != nil {
+			log.Info().Msgf("invalid repo URL: %v\n", err)
+			requestError(w, http.StatusInternalServerError)
+			return
+		}
+
 		err = credentialhandler.WriteProperties(map[string]string{
-			"protocol":            tokenResponse.URL().Scheme,
-			"host":                tokenResponse.URL().Host,
-			"path":                tokenResponse.URL().Path,
+			"protocol":            tokenURL.Scheme,
+			"host":                tokenURL.Host,
+			"path":                tokenURL.Path,
 			"username":            "x-access-token",
 			"password":            tokenResponse.Token,
 			"password_expiry_utc": tokenResponse.ExpiryUnix(),
@@ -134,25 +141,18 @@ type PipelineRepositoryToken struct {
 	RepositoryURL    string    `json:"repositoryUrl"`
 	Token            string    `json:"token"`
 	Expiry           time.Time `json:"expiry"`
-	url              *url.URL
 }
 
-func (t *PipelineRepositoryToken) URL() *url.URL {
-	if t.url != nil {
-		return t.url
-	}
-
+func (t PipelineRepositoryToken) URL() (*url.URL, error) {
 	url, err := url.Parse(t.RepositoryURL)
 	if err != nil {
-		panic(err) //FIXME keep your towel handy
+		return nil, err
 	}
 
-	t.url = url
-
-	return url
+	return url, nil
 }
 
-func (t *PipelineRepositoryToken) ExpiryUnix() string {
+func (t PipelineRepositoryToken) ExpiryUnix() string {
 	return strconv.FormatInt(t.Expiry.UTC().Unix(), 10)
 }
 
