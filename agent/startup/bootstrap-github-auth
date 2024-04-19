@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+echo "installing Github credential plugin"
+
+plugin_repo="https://github.com/jamestelfer/github-app-auth-buildkite-plugin.git"
+plugin_version="v1.0.1"
+plugin_dir="/buildkite/plugins/github-app-auth-buildkite-plugin"
+
+[[ -d "${plugin_dir}" ]] && rm -rf "${plugin_dir}"
+
+GIT_CONFIG_COUNT=1 \
+GIT_CONFIG_KEY_0=advice.detachedHead \
+GIT_CONFIG_VALUE_0=false \
+  git clone --depth 1 --single-branch --no-tags \
+    --branch "${plugin_version}" -- \
+    "${plugin_repo}" "${plugin_dir}"

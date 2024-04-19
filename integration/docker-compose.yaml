@@ -4,11 +4,14 @@ services:
     command: [ "start" ]
     environment:
       - BUILDKITE_AGENT_TOKEN
+    volumes:
+      - "../agent/startup:/docker-entrypoint.d:ro"
+      - "../agent/hooks:/buildkite/hooks:ro"
 
   vendor:
     image: alpine
     working_dir: "/src"
-    command: [ "./vendor" ]
+    command: [ "./dist/vendor" ]
     environment:
       - ENV=development
       - SERVER_PORT=80
