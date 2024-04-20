@@ -16,6 +16,7 @@ import (
 	"github.com/jamestelfer/ghauth/internal/config"
 	"github.com/jamestelfer/ghauth/internal/github"
 	"github.com/jamestelfer/ghauth/internal/jwt"
+	"github.com/jamestelfer/ghauth/internal/vendor"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -38,15 +39,15 @@ func configureServerRoutes(cfg config.Config) error {
 		return fmt.Errorf("github configuration failed: %w", err)
 	}
 
-	vendorCache, err := newCachedPipelineTokenVendor()
+	vendorCache, err := vendor.Cached()
 	if err != nil {
 		return fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
 
-	vendor := vendorCache(IssueTokenForPipeline(bk.RepositoryLookup, gh.CreateAccessToken))
+	tokenVendor := vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken))
 
-	http.Handle("POST /token", authorized.Then(handlePostToken(vendor)))
-	http.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(vendor)))
+	http.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
+	http.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
 
 	return nil
 }
