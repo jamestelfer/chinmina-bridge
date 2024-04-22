@@ -24,6 +24,14 @@ build: dist mod
 run: build
 	dist/vendor
 
+.PHONY: docker
+docker: build
+	docker compose -f integration/docker-compose.yaml up
+
+.PHONY: docker-down
+docker: build
+	docker compose -f integration/docker-compose.yaml down
+
 # ensures that `go mod tidy` has been run after any dependency changes
 .PHONY: ensure-deps
 ensure-deps: mod
