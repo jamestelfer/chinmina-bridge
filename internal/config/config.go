@@ -26,7 +26,8 @@ type AuthorizationConfig struct {
 }
 
 type BuildkiteConfig struct {
-	Token string `env:"BUILDKITE_API_TOKEN, required"`
+	Token  string `env:"BUILDKITE_API_TOKEN, required"`
+	ApiURL string // internal only
 }
 
 type GithubConfig struct {
