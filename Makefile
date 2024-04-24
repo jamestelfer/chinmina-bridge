@@ -29,7 +29,7 @@ docker: build
 	docker compose -f integration/docker-compose.yaml up
 
 .PHONY: docker-down
-docker: build
+docker-down:
 	docker compose -f integration/docker-compose.yaml down
 
 # ensures that `go mod tidy` has been run after any dependency changes
