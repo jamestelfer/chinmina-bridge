@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/buildkite/go-buildkite/v3/buildkite"
 	"github.com/jamestelfer/ghauth/internal/config"
@@ -21,6 +22,12 @@ func New(cfg config.BuildkiteConfig) PipelineLookup {
 
 	client := buildkite.NewClient(transport.Client())
 
+	if cfg.ApiURL != "" {
+		url, _ := url.Parse(cfg.ApiURL)
+		transport.APIHost = url.Host
+		client.BaseURL, _ = url.Parse(cfg.ApiURL)
+	}
+
 	return PipelineLookup{
 		client,
 	}
@@ -35,7 +42,7 @@ func (p PipelineLookup) RepositoryLookup(ctx context.Context, organizationSlug, 
 
 	repo := pipeline.Repository
 	if repo == nil {
-		return "", fmt.Errorf("no configured repository for pipeline  %s/%s", organizationSlug, pipelineSlug)
+		return "", fmt.Errorf("no configured repository for pipeline %s/%s", organizationSlug, pipelineSlug)
 	}
 
 	return *repo, nil
