@@ -40,6 +40,18 @@ func New(cfg config.GithubConfig) (Client, error) {
 		},
 	)
 
+	// for testing use
+	if cfg.ApiURL != "" {
+		apiURL := cfg.ApiURL
+		if !strings.HasSuffix(apiURL, "/") {
+			apiURL += "/"
+		}
+
+		appInstallationTransport.BaseURL = cfg.ApiURL
+		u, _ := url.Parse(apiURL)
+		client.BaseURL = u
+	}
+
 	return Client{
 		client,
 		cfg.InstallationID,
@@ -52,8 +64,10 @@ func (c Client) CreateAccessToken(ctx context.Context, repositoryURL string) (st
 		return "", time.Time{}, err
 	}
 
-	qualifiedIdentifier, _ := strings.CutSuffix(u.Path, ".git")
-	_, repoName, _ := strings.Cut(qualifiedIdentifier[1:], "/")
+	// qualifiedIdentifier, _ := strings.CutSuffix(u.Path, ".git")
+	// _, repoName, _ := strings.Cut(qualifiedIdentifier[1:], "/")
+
+	_, repoName := RepoForURL(*u)
 
 	tok, r, err := c.client.Apps.CreateInstallationToken(ctx, c.installationID,
 		&github.InstallationTokenOptions{
