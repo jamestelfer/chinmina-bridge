@@ -35,6 +35,7 @@ func TestMiddleware(t *testing.T) {
 		customClaims   BuildkiteClaims
 		wantStatusCode int
 		wantBodyText   string
+		options        []jwtmiddleware.Option
 	}{
 		{
 			name: "has subject",
@@ -91,6 +92,18 @@ func TestMiddleware(t *testing.T) {
 			wantStatusCode: http.StatusUnauthorized,
 			wantBodyText:   "JWT is invalid",
 		},
+		{
+			name: "error handler",
+			claims: valid(jwt.Claims{
+				Audience: []string{"audience"},
+				Subject:  "subject",
+				Issuer:   "issuer",
+			}),
+			customClaims:   custom("that dog ain't gonna hunt", "test-pipeline"),
+			wantStatusCode: http.StatusUnauthorized,
+			wantBodyText:   "JWT is invalid",
+			options:        []jwtmiddleware.Option{jwtmiddleware.WithErrorHandler(LogErrorHandler())},
+		},
 	}
 
 	jwk := generateJWK(t)
@@ -122,7 +135,15 @@ func TestMiddleware(t *testing.T) {
 
 			responseRecorder := httptest.NewRecorder()
 
-			mw, err := Middleware(cfg, jwtmiddleware.WithErrorHandler(errorHandler(t)))
+			options := []jwtmiddleware.Option{
+				jwtmiddleware.WithErrorHandler(errorHandler(t)),
+			}
+
+			if len(test.options) > 0 {
+				options = append(options, test.options...)
+			}
+
+			mw, err := Middleware(cfg, options...)
 			require.NoError(t, err)
 
 			handler := mw(successHandler)
