@@ -73,7 +73,7 @@ func TestCustomClaims(t *testing.T) {
 			},
 		},
 		{
-			name: "unknown claims",
+			name: "known claims",
 			claims: &validator.ValidatedClaims{
 				RegisteredClaims: validator.RegisteredClaims{
 					Audience: []string{"audience"},
@@ -98,4 +98,38 @@ func TestCustomClaims(t *testing.T) {
 			assert.Equal(t, tc.expectedCustomClaims, actual)
 		})
 	}
+}
+
+func TestRequiredCustomClaims_Panics_With_No_Value(t *testing.T) {
+	assert.Panics(t, func() {
+		RequireBuildkiteClaimsFromContext(context.Background())
+	})
+}
+
+func TestRequiredCustomClaims_Succeeds_With_Custom_Claims(t *testing.T) {
+	claims := &validator.ValidatedClaims{
+		RegisteredClaims: validator.RegisteredClaims{
+			Audience: []string{"audience"},
+			Subject:  "subject",
+			Issuer:   "issuer",
+		},
+		CustomClaims: &BuildkiteClaims{
+			OrganizationSlug: "expected-organization",
+			PipelineSlug:     "expected-pipeline",
+		},
+	}
+
+	expectedCustomClaims := BuildkiteClaims{
+		OrganizationSlug: "expected-organization",
+		PipelineSlug:     "expected-pipeline",
+	}
+
+	ctx := context.WithValue(context.Background(), jwtmiddleware.ContextKey{}, claims)
+
+	var actualClaims BuildkiteClaims
+	assert.NotPanics(t, func() {
+		actualClaims = RequireBuildkiteClaimsFromContext(ctx)
+	})
+
+	assert.Equal(t, expectedCustomClaims, actualClaims)
 }

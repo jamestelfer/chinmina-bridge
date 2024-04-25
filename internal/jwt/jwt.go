@@ -87,6 +87,15 @@ func BuildkiteClaimsFromContext(ctx context.Context) *BuildkiteClaims {
 	return bkClaims
 }
 
+func RequireBuildkiteClaimsFromContext(ctx context.Context) BuildkiteClaims {
+	c := BuildkiteClaimsFromContext(ctx)
+	if c == nil {
+		panic("Buildkite claims not present in context, likely used outside of the JWT middleware")
+	}
+
+	return *c
+}
+
 type KeyFunc = func(ctx context.Context) (any, error)
 
 func remoteJWKS(cfg config.AuthorizationConfig) (url.URL, KeyFunc, error) {
