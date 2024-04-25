@@ -15,13 +15,9 @@ import (
 func handlePostToken(tokenVendor vendor.PipelineTokenVendor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// claims must be present from the middleware
-		claims := jwt.BuildkiteClaimsFromContext(r.Context())
-		if claims == nil {
-			requestError(w, http.StatusUnauthorized)
-			return
-		}
+		claims := jwt.RequireBuildkiteClaimsFromContext(r.Context())
 
-		tokenResponse, err := tokenVendor(r.Context(), *claims, "")
+		tokenResponse, err := tokenVendor(r.Context(), claims, "")
 		if err != nil {
 			log.Info().Msgf("token creation failed %v\n", err)
 			requestError(w, http.StatusInternalServerError)
@@ -54,11 +50,7 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 		defer func() { io.Copy(io.Discard, r.Body) }()
 
 		// claims must be present from the middleware
-		claims := jwt.BuildkiteClaimsFromContext(r.Context())
-		if claims == nil {
-			requestError(w, http.StatusUnauthorized)
-			return
-		}
+		claims := jwt.RequireBuildkiteClaimsFromContext(r.Context())
 
 		requestedRepo, err := credentialhandler.ReadProperties(r.Body)
 		if err != nil {
@@ -78,7 +70,7 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 			u.Path = path
 		}
 
-		tokenResponse, err := tokenVendor(r.Context(), *claims, u.String())
+		tokenResponse, err := tokenVendor(r.Context(), claims, u.String())
 		if err != nil {
 			log.Info().Msgf("token creation failed %v\n", err)
 			requestError(w, http.StatusInternalServerError)
