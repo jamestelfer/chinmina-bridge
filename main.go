@@ -83,36 +83,43 @@ func launchServer() error {
 }
 
 func serveHTTP(serverCfg config.ServerConfig) error {
-	// capture signals to gracefully shutdown the server
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT)
+	serverCtx := context.Background()
+
+	// capture shutdown signals to allow for graceful shutdown
+	ctx, stop := signal.NotifyContext(serverCtx,
+		os.Interrupt, syscall.SIGINT, syscall.SIGTERM,
+	)
+	defer stop()
 
 	server := &http.Server{Addr: fmt.Sprintf(":%d", serverCfg.Port)}
 
 	// Start the server in a new goroutine
-	var serverErr error
+	serverErr := make(chan error, 1)
 	go func() {
 		log.Info().Int("port", serverCfg.Port).Msg("starting server")
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			log.Error().Err(err).Msg("failed to start server")
-			serverErr = err
-
-			// signal the main goroutine to exit gracefully
-			signalChan <- syscall.SIGINT
-		}
+		serverErr <- server.ListenAndServe()
 	}()
 
-	sig := <-signalChan
-	log.Info().Stringer("signal", sig).Msg("server shutdown requested")
+	var startupError error
+
+	select {
+	case err := <-serverErr:
+		// Error when starting HTTP server.
+		if err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("failed to start server")
+		}
+		startupError = err
+	case <-ctx.Done():
+		log.Info().Msg("server shutdown requested")
+		// Wait for first CTRL+C.
+		// Stop receiving signal notifications as soon as possible.
+		stop()
+	}
 
 	// Gracefully stop the server, allow up to 25 seconds for in-flight requests to complete
 	shutdownTimeout := time.Duration(serverCfg.ShutdownTimeoutSeconds) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer func() {
-		// additional shutdown handling if required
-		cancel()
-	}()
+	defer cancel()
 
 	err := server.Shutdown(ctx)
 	if err != nil {
@@ -121,7 +128,7 @@ func serveHTTP(serverCfg config.ServerConfig) error {
 
 	// if shutdown is successful but startup failed, the process should exit
 	// with an error
-	return serverErr
+	return startupError
 }
 
 func configureLogging() {
