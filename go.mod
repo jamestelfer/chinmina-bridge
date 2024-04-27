@@ -1,6 +1,6 @@
 module github.com/jamestelfer/ghauth
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.1
@@ -22,6 +22,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 )

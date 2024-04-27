@@ -23,11 +23,18 @@ import (
 	"github.com/justinas/alice"
 )
 
-func configureServerRoutes(cfg config.Config) error {
+type AuthServer interface {
+	ListenAndServe() error
+	Shutdown(ctx context.Context) error
+}
+
+func configureServerRoutes(cfg config.Config) (http.Handler, error) {
+	mux := http.NewServeMux()
+
 	// configure middleware
 	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
 	if err != nil {
-		return fmt.Errorf("authorizer configuration failed: %w", err)
+		return nil, fmt.Errorf("authorizer configuration failed: %w", err)
 	}
 
 	authorized := alice.New(authorizer)
@@ -36,20 +43,20 @@ func configureServerRoutes(cfg config.Config) error {
 	bk := buildkite.New(cfg.Buildkite)
 	gh, err := github.New(cfg.Github)
 	if err != nil {
-		return fmt.Errorf("github configuration failed: %w", err)
+		return nil, fmt.Errorf("github configuration failed: %w", err)
 	}
 
 	vendorCache, err := vendor.Cached()
 	if err != nil {
-		return fmt.Errorf("vendor cache configuration failed: %w", err)
+		return nil, fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
 
 	tokenVendor := vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken))
 
-	http.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
-	http.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
+	mux.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
+	mux.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
 
-	return nil
+	return mux, nil
 }
 
 func main() {
@@ -69,12 +76,17 @@ func launchServer() error {
 		return fmt.Errorf("configuration load failed: %w", err)
 	}
 
-	err = configureServerRoutes(cfg)
+	handler, err := configureServerRoutes(cfg)
 	if err != nil {
 		return fmt.Errorf("server routing configuration failed: %w", err)
 	}
 
-	err = serveHTTP(cfg.Server)
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler: handler,
+	}
+
+	err = serveHTTP(cfg.Server, server)
 	if err != nil {
 		return fmt.Errorf("server failed: %w", err)
 	}
@@ -82,46 +94,53 @@ func launchServer() error {
 	return nil
 }
 
-func serveHTTP(serverCfg config.ServerConfig) error {
-	// capture signals to gracefully shutdown the server
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT)
+func serveHTTP(serverCfg config.ServerConfig, server AuthServer) error {
+	serverCtx := context.Background()
 
-	server := &http.Server{Addr: fmt.Sprintf(":%d", serverCfg.Port)}
+	// capture shutdown signals to allow for graceful shutdown
+	ctx, stop := signal.NotifyContext(serverCtx,
+		syscall.SIGINT, syscall.SIGTERM,
+	)
+	defer stop()
 
 	// Start the server in a new goroutine
-	var serverErr error
+	serverErr := make(chan error, 1)
 	go func() {
 		log.Info().Int("port", serverCfg.Port).Msg("starting server")
-		err := server.ListenAndServe()
+		serverErr <- server.ListenAndServe()
+	}()
+
+	var startupError error
+
+	select {
+	case err := <-serverErr:
+		// Error when starting HTTP server.
 		if err != nil && err != http.ErrServerClosed {
 			log.Error().Err(err).Msg("failed to start server")
-			serverErr = err
-
-			// signal the main goroutine to exit gracefully
-			signalChan <- syscall.SIGINT
 		}
-	}()
+		// save this error to return, keep processing shutdown sequence
+		startupError = err
+	case <-ctx.Done():
+		log.Info().Msg("server shutdown requested")
+		// Stop receiving signal notifications as soon as possible.
+		stop()
+	}
 
-	sig := <-signalChan
-	log.Info().Stringer("signal", sig).Msg("server shutdown requested")
-
-	// Gracefully stop the server, allow up to 25 seconds for in-flight requests to complete
+	// Gracefully stop the server, allowing a configurable amount of time for
+	// in-flight requests to complete
 	shutdownTimeout := time.Duration(serverCfg.ShutdownTimeoutSeconds) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer func() {
-		// additional shutdown handling if required
-		cancel()
-	}()
+	defer cancel()
 
 	err := server.Shutdown(ctx)
 	if err != nil {
 		return fmt.Errorf("server shutdown failed: %w", err)
 	}
 
-	// if shutdown is successful but startup failed, the process should exit
-	// with an error
-	return serverErr
+	log.Info().Msg("server shutdown complete")
+
+	// if startup failed the error is returned
+	return startupError
 }
 
 func configureLogging() {
