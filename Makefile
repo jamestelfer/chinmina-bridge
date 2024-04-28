@@ -37,3 +37,14 @@ docker-down:
 ensure-deps: mod
 	@go mod tidy
 	@git diff --exit-code
+
+# use generation tool to create a JWKS key pair that can be used for local
+# testing.
+keygen:
+	go install github.com/go-jose/go-jose/v4/jose-util@latest
+	cd .development/keys \
+		&& rm -f *.json \
+		&& jose-util generate-key --use sig --alg RS256 --kid testing \
+		&& chmod +w *.json \
+		&& jq '. | { keys: [ . ] }' < jwk-sig-testing-pub.json > tmp.json \
+		&& mv tmp.json jwk-sig-testing-pub.json
