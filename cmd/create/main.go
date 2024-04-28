@@ -1,3 +1,6 @@
+// This command is only used for local testing: it is executed by the local
+// credential helper used to run commands with a locally-signed JWT against a
+// local server.
 package main
 
 import (
@@ -29,7 +32,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	jwksPath := ".development/keys/jwks.private.json"
+	jwksPath := ".development/keys/jwk-sig-testing-priv.json"
 
 	jwksBytes, err := os.ReadFile(jwksPath)
 	if err != nil {
@@ -37,16 +40,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	jwks := jose.JSONWebKeySet{}
-	err = json.Unmarshal(jwksBytes, &jwks)
+	jwksKey := jose.JSONWebKey{}
+	err = json.Unmarshal(jwksBytes, &jwksKey)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error loading jwks: %v\n", err)
 		os.Exit(1)
 	}
 
-	key := jwks.Key("test-key")[0]
-
-	jwt, err := createJWT(&key, validity(jwt.Claims{
+	jwt, err := createJWT(&jwksKey, validity(jwt.Claims{
 		Audience: []string{cfg.Audience},
 		Subject:  cfg.Subject,
 		Issuer:   cfg.Issuer,

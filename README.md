@@ -179,6 +179,11 @@ variables, and can be deployed to a server or as a container.
 
 ## Contributing
 
-### Generating test keys
+Contributions are welcome.
 
-Use [https://mkjwk.org], save private and public to `.development/keys`. Good enough for test credentials.
+- `direnv` is the tool for setting up the test environment
+- some variant of docker compose makes it easier to run locally
+- Run `make keygen` to create test keys
+- Execute `git` commands in the `.development/keys` directory. This has git
+  configuration set up so it uses a local credential helper that will use the
+  keys in the `.development/keys` directory.
