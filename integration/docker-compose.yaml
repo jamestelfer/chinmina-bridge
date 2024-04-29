@@ -8,12 +8,12 @@ services:
       - "../agent/startup:/docker-entrypoint.d:ro"
       - "../agent/hooks:/buildkite/hooks:ro"
 
-  vendor:
+  chinmina-bridge:
     image: alpine
     depends_on:
       - jaeger
     working_dir: "/src"
-    command: [ "./dist/vendor" ]
+    command: [ "./dist/chinmina-bridge" ]
     environment:
       - ENV=development
       - SERVER_PORT=80

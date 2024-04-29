@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"

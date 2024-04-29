@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

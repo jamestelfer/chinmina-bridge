@@ -12,12 +12,12 @@ import (
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	"github.com/jamestelfer/ghauth/internal/buildkite"
-	"github.com/jamestelfer/ghauth/internal/config"
-	"github.com/jamestelfer/ghauth/internal/github"
-	"github.com/jamestelfer/ghauth/internal/jwt"
-	"github.com/jamestelfer/ghauth/internal/observe"
-	"github.com/jamestelfer/ghauth/internal/vendor"
+	"github.com/jamestelfer/chinmina-bridge/internal/buildkite"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/github"
+	"github.com/jamestelfer/chinmina-bridge/internal/jwt"
+	"github.com/jamestelfer/chinmina-bridge/internal/observe"
+	"github.com/jamestelfer/chinmina-bridge/internal/vendor"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 

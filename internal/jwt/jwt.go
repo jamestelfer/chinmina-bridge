@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gopkg.in/go-jose/go-jose.v2"
 
-	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 )
 
 // Middleware returns HTTP middleware that verifies the JWT and

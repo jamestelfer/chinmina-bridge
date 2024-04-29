@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/jamestelfer/ghauth/internal/credentialhandler"
-	"github.com/jamestelfer/ghauth/internal/jwt"
-	"github.com/jamestelfer/ghauth/internal/vendor"
+	"github.com/jamestelfer/chinmina-bridge/internal/credentialhandler"
+	"github.com/jamestelfer/chinmina-bridge/internal/jwt"
+	"github.com/jamestelfer/chinmina-bridge/internal/vendor"
 	"github.com/rs/zerolog/log"
 )
 

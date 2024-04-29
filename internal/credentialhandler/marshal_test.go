@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jamestelfer/ghauth/internal/credentialhandler"
+	"github.com/jamestelfer/chinmina-bridge/internal/credentialhandler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
