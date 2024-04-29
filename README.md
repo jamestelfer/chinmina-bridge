@@ -87,13 +87,13 @@ sequenceDiagram
     Credential Helper->>+Buildkite API: Request Buildkite OIDC token
     Buildkite API->>-Credential Helper: bk-oidc
     Credential Helper->>+Chinmina Bridge: Request GH token (auth bk-oidc)
-    Chinmina Bridge->>+Buildkite API: Get Pipeline Repo
-    Buildkite API-->>-Chinmina Bridge:
+    Chinmina Bridge->>+Buildkite API: Get Pipeline Details
+    Buildkite API-->>-Chinmina Bridge: pipeline-repository
     Chinmina Bridge->>+GitHub: Create Token (auth app JWT)
-    GitHub-->>-Chinmina Bridge:
+    GitHub-->>-Chinmina Bridge: app-token
     Chinmina Bridge->>-Credential Helper: bk-oidc
     Credential Helper->>-Git: "x-access-token"/app-token
-    Git-->>-Buildkite Job:
+    Git-->>-Buildkite Job: complete
 ```
 
 ## Limitations
