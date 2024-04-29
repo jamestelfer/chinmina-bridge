@@ -1,12 +1,26 @@
 # Chinmina Bridge: Buildkite/Github OIDC token bridge
 
-Exposes an HTTP endpoint that allows Buildkite Agents to use an OIDC token to
-request a Github token in return. The GitHub token is created for the agent
-using a Github application that is created for the bridge and configured to
-allow access to the implementor's GitHub organization.
+Allows Buildkite agents to get valid GitHub tokens that can be used to perform
+Git or other GitHub API actions. It is intended to be an alternative to the use
+of SSH deploy keys or long-lived Personal Access Tokens.
 
-The token is created with `contents:read` permissions on the repository
-associated with the executing pipeline.
+The bridge itself is an HTTP endpoint that uses a [GitHub
+application][github-app] to create [ephemeral GitHub access
+tokens][github-app-tokens]. Requests are authorized with a [Buildkite
+OIDC][buildkite-oidc] token, allowing a token to be created just for the
+repository associated with an executing pipeline.
+
+The token is created with `contents:read` permissions, and only has access to
+the repository associated with the executing pipeline.
+
+Two endpoints are exposed: `/token`, which returns a token and its expiry, and
+`/git-credentials`, which returns the token and repository metadata in the [Git
+Credentials format][git-credential-helper].
+
+[github-app]: https://docs.github.com/en/apps
+[github-app-tokens]: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app
+[buildkite-oidc]: https://buildkite.com/docs/agent/v3/cli-oidc
+[git-credential-helper]: https://git-scm.com/docs/gitcredentials#_custom_helpers
 
 ## Why?
 
