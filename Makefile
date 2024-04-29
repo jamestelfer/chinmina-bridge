@@ -17,12 +17,12 @@ dist:
 
 .PHONY: build
 build: dist mod
-	CGO_ENABLED=0 go build -o dist/vendor .
+	CGO_ENABLED=0 go build -o dist/chinmina-bridge .
 	CGO_ENABLED=0 go build -o dist/oidc cmd/create/main.go
 
 .PHONY: run
 run: build
-	dist/vendor
+	dist/chinmina-bridge
 
 .PHONY: docker
 docker: build

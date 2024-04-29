@@ -1,4 +1,4 @@
-module github.com/jamestelfer/ghauth
+module github.com/jamestelfer/chinmina-bridge
 
 go 1.22
 

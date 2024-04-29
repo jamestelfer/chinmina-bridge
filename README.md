@@ -1,9 +1,9 @@
-# Buildkite/Github OIDC bridge 
+# Chinmina Bridge: Buildkite/Github OIDC token bridge
 
-Exposes an endpoint that allows Buildkite Agents to use an OIDC token to request
-a Github token in return. The GitHub token is created for the agent using a
-Github application that is created for the bridge and configured to allow access
-to the implementor's GitHub organization.
+Exposes an HTTP endpoint that allows Buildkite Agents to use an OIDC token to
+request a Github token in return. The GitHub token is created for the agent
+using a Github application that is created for the bridge and configured to
+allow access to the implementor's GitHub organization.
 
 The token is created with `contents:read` permissions on the repository
 associated with the executing pipeline.
@@ -46,17 +46,17 @@ Each of these have some downsides:
 
 ## Overview
 
-The OIDC bridge (this project) is used by jobs running on a Buildkite agent to
-request tokens from Github. These can be used to communicate with the GitHub API
-or (via Git) to enable authenticated Git actions.
+`chinmina-bridge` is used by jobs running on a Buildkite agent to request tokens
+from Github. These can be used to communicate with the GitHub API or (via Git)
+to enable authenticated Git actions.
 
 Git authentication is facilitated by a [Git credential
 helper](https://github.com/jamestelfer/github-app-auth-buildkite-plugin), which
 communicates with the bridge and supplies the result to Git in the appropriate
 format.
 
-The following sequence illustrates a Git authentication flow facilitated by the
-OIDC bridge.
+The following sequence illustrates a Git authentication flow facilitated by
+`chinmina-bridge`.
 
 ```mermaid
 sequenceDiagram
@@ -66,20 +66,20 @@ sequenceDiagram
         participant Credential Helper
     end
     box Self hosted
-        participant OIDC Bridge
+        participant Chinmina Bridge
     end
     Buildkite Job->>+Git: clone
     Git ->>+ Credential Helper: get credentials
     Credential Helper->>+Buildkite API: Request Buildkite OIDC token
     Buildkite API->>-Credential Helper: bk-oidc
-    Credential Helper->>+OIDC Bridge: Request GH token (auth bk-oidc)
-    OIDC Bridge->>+Buildkite API: Get Pipeline Repo
-    Buildkite API-->>-OIDC Bridge: 
-    OIDC Bridge->>+GitHub: Create Token (auth app JWT)
-    GitHub-->>-OIDC Bridge: 
-    OIDC Bridge->>-Credential Helper: bk-oidc
+    Credential Helper->>+Chinmina Bridge: Request GH token (auth bk-oidc)
+    Chinmina Bridge->>+Buildkite API: Get Pipeline Repo
+    Buildkite API-->>-Chinmina Bridge:
+    Chinmina Bridge->>+GitHub: Create Token (auth app JWT)
+    GitHub-->>-Chinmina Bridge:
+    Chinmina Bridge->>-Credential Helper: bk-oidc
     Credential Helper->>-Git: "x-access-token"/app-token
-    Git-->>-Buildkite Job: 
+    Git-->>-Buildkite Job:
 ```
 
 ## Limitations

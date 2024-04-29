@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/buildkite/go-buildkite/v3/buildkite"
-	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 )
 
 type PipelineLookup struct {

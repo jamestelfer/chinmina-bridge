@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	localjwt "github.com/jamestelfer/ghauth/internal/jwt"
+	localjwt "github.com/jamestelfer/chinmina-bridge/internal/jwt"
 	"github.com/sethvargo/go-envconfig"
 	"gopkg.in/go-jose/go-jose.v2"
 	"gopkg.in/go-jose/go-jose.v2/json"

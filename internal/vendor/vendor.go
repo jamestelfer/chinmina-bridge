@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jamestelfer/ghauth/internal/jwt"
+	"github.com/jamestelfer/chinmina-bridge/internal/jwt"
 	"github.com/rs/zerolog/log"
 )
 

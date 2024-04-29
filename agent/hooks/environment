@@ -7,7 +7,7 @@
 # Changing the parameters supplied will be necessary to ensure that agents can
 # connect to the service and include the correct audience.
 #
-BUILDKITE_PLUGIN_GITHUB_APP_AUTH_VENDOR_URL="http://vendor" \
+BUILDKITE_PLUGIN_GITHUB_APP_AUTH_VENDOR_URL="http://chinmina-bridge" \
 BUILDKITE_PLUGIN_GITHUB_APP_AUTH_AUDIENCE="github-app-auth:jamestelfer" \
     source /buildkite/plugins/github-app-auth-buildkite-plugin/hooks/environment
 

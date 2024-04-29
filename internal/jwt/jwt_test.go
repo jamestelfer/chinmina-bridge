@@ -10,7 +10,7 @@ import (
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/go-jose/go-jose.v2"

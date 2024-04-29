@@ -10,7 +10,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v61/github"
-	"github.com/jamestelfer/ghauth/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/rs/zerolog/log"
 )
 
