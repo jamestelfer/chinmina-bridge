@@ -28,6 +28,10 @@ func (m *MockServer) Shutdown(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *MockServer) RegisterOnShutdown(f func()) {
+	m.Called(f)
+}
+
 func TestServeHTTP_StartupError(t *testing.T) {
 	// deregister signal handlers afterwards just in case they're left around
 	defer signal.Reset()
@@ -37,9 +41,11 @@ func TestServeHTTP_StartupError(t *testing.T) {
 	mockServer := MockServer{}
 	mockServer.On("ListenAndServe").Return(expectedErr)
 	mockServer.On("Shutdown", mock.Anything).Return(nil)
+	mockServer.On("RegisterOnShutdown", mock.Anything)
 
 	serverCfg := config.ServerConfig{Port: -1, ShutdownTimeoutSeconds: 25}
-	err := serveHTTP(serverCfg, &mockServer)
+	observeCfg := config.ObserveConfig{Enabled: false}
+	err := serveHTTP(serverCfg, observeCfg, &mockServer)
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
@@ -56,6 +62,7 @@ func TestServeHTTP_ShutdownSignal(t *testing.T) {
 	mockServer := MockServer{}
 	mockServer.On("ListenAndServe").Return(expectedErr).WaitUntil(time.After(5 * time.Second))
 	mockServer.On("Shutdown", mock.Anything).Return(nil)
+	mockServer.On("RegisterOnShutdown", mock.Anything)
 
 	// send termination signal after the mock server has had enough time to start
 	startupTimer, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
@@ -66,7 +73,8 @@ func TestServeHTTP_ShutdownSignal(t *testing.T) {
 	}()
 
 	serverCfg := config.ServerConfig{Port: -1, ShutdownTimeoutSeconds: 25}
-	err := serveHTTP(serverCfg, &mockServer)
+	observeCfg := config.ObserveConfig{Enabled: false}
+	err := serveHTTP(serverCfg, observeCfg, &mockServer)
 
 	require.NoError(t, err)
 
@@ -86,9 +94,11 @@ func TestServeHTTP_GracefulShutdown(t *testing.T) {
 		<-ctx.Done()
 		actualError = ctx.Err()
 	}).Return(errors.New("ignore this"))
+	mockServer.On("RegisterOnShutdown", mock.Anything)
 
 	serverCfg := config.ServerConfig{Port: -1, ShutdownTimeoutSeconds: 1}
-	_ = serveHTTP(serverCfg, &mockServer)
+	observeCfg := config.ObserveConfig{Enabled: false}
+	_ = serveHTTP(serverCfg, observeCfg, &mockServer)
 
 	require.Error(t, actualError)
 	assert.ErrorContains(t, actualError, "context deadline exceeded")

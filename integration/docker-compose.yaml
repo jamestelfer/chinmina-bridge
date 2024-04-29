@@ -10,6 +10,8 @@ services:
 
   vendor:
     image: alpine
+    depends_on:
+      - jaeger
     working_dir: "/src"
     command: [ "./dist/vendor" ]
     environment:
@@ -21,5 +23,16 @@ services:
       - GITHUB_APP_PRIVATE_KEY
       - GITHUB_APP_ID
       - GITHUB_APP_INSTALLATION_ID
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     volumes:
       - "..:/src"
+
+  # jaeger all in one for local OTEL tracing, using in-memory storage which is
+  # not persisted.
+  jaeger:
+    image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
+    ports:
+      - "16686:16686" # viewer
+      - "16687:16687" # admin
+    environment:
+      - LOG_LEVEL=debug

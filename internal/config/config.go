@@ -10,6 +10,7 @@ type Config struct {
 	Authorization AuthorizationConfig
 	Buildkite     BuildkiteConfig
 	Github        GithubConfig
+	Observe       ObserveConfig
 	Server        ServerConfig
 }
 
@@ -35,6 +36,11 @@ type GithubConfig struct {
 	PrivateKey     string `env:"GITHUB_APP_PRIVATE_KEY, required"`
 	ApplicationID  int64  `env:"GITHUB_APP_ID, required"`
 	InstallationID int64  `env:"GITHUB_APP_INSTALLATION_ID, required"`
+}
+
+type ObserveConfig struct {
+	Enabled bool   `env:"OBSERVE_ENABLED, default=false"`
+	Type    string `env:"OBSERVE_TYPE, default=grpc"`
 }
 
 func Load(ctx context.Context) (cfg Config, err error) {

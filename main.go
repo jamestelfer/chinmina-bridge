@@ -16,6 +16,7 @@ import (
 	"github.com/jamestelfer/ghauth/internal/config"
 	"github.com/jamestelfer/ghauth/internal/github"
 	"github.com/jamestelfer/ghauth/internal/jwt"
+	"github.com/jamestelfer/ghauth/internal/observe"
 	"github.com/jamestelfer/ghauth/internal/vendor"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,10 +27,12 @@ import (
 type AuthServer interface {
 	ListenAndServe() error
 	Shutdown(ctx context.Context) error
+	RegisterOnShutdown(f func())
 }
 
 func configureServerRoutes(cfg config.Config) (http.Handler, error) {
-	mux := http.NewServeMux()
+	// wrap a mux such that HTTP telemetry is configured by default
+	mux := observe.NewMux(http.NewServeMux())
 
 	// configure middleware
 	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
@@ -86,7 +89,7 @@ func launchServer() error {
 		Handler: handler,
 	}
 
-	err = serveHTTP(cfg.Server, server)
+	err = serveHTTP(cfg.Server, cfg.Observe, server)
 	if err != nil {
 		return fmt.Errorf("server failed: %w", err)
 	}
@@ -94,7 +97,7 @@ func launchServer() error {
 	return nil
 }
 
-func serveHTTP(serverCfg config.ServerConfig, server AuthServer) error {
+func serveHTTP(serverCfg config.ServerConfig, observeConfig config.ObserveConfig, server AuthServer) error {
 	serverCtx := context.Background()
 
 	// capture shutdown signals to allow for graceful shutdown
@@ -102,6 +105,16 @@ func serveHTTP(serverCfg config.ServerConfig, server AuthServer) error {
 		syscall.SIGINT, syscall.SIGTERM,
 	)
 	defer stop()
+
+	shutdownTelemetry, err := observe.Configure(serverCtx, observeConfig)
+	if err != nil {
+		return fmt.Errorf("telemetry bootstrap failed: %w", err)
+	}
+	server.RegisterOnShutdown(func() {
+		log.Info().Msg("telemetry: shutting down")
+		shutdownTelemetry(serverCtx)
+		log.Info().Msg("telemetry: shutdown complete")
+	})
 
 	// Start the server in a new goroutine
 	serverErr := make(chan error, 1)
@@ -132,7 +145,7 @@ func serveHTTP(serverCfg config.ServerConfig, server AuthServer) error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	err := server.Shutdown(ctx)
+	err = server.Shutdown(ctx)
 	if err != nil {
 		return fmt.Errorf("server shutdown failed: %w", err)
 	}
