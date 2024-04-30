@@ -59,3 +59,6 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// replaced as the OAuth middleware is depending on a version with a published vulnerability
+replace gopkg.in/go-jose/go-jose.v2 v2.6.2 => gopkg.in/go-jose/go-jose.v2 v2.6.3
