@@ -1,6 +1,8 @@
 services:
   buildkite-agent:
     image: buildkite/agent:3
+    depends_on:
+      - chinmina-bridge
     command: [ "start" ]
     environment:
       - BUILDKITE_AGENT_TOKEN
