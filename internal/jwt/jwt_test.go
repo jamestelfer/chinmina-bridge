@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/go-jose/go-jose.v2"
-	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
 
 /*
@@ -256,7 +257,7 @@ func createRequestJWT(t *testing.T, jwk *jose.JSONWebKey, issuer string, claims 
 		Issuer: issuer,
 	})
 
-	token, err := builder.CompactSerialize()
+	token, err := builder.Serialize()
 	require.NoError(t, err)
 
 	t.Logf("issued token=%s", token)

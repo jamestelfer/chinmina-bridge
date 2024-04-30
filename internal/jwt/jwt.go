@@ -8,11 +8,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
+
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/go-jose/go-jose.v2"
 
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 )
