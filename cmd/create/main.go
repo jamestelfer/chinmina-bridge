@@ -9,11 +9,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/json"
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	localjwt "github.com/jamestelfer/chinmina-bridge/internal/jwt"
 	"github.com/sethvargo/go-envconfig"
-	"gopkg.in/go-jose/go-jose.v2"
-	"gopkg.in/go-jose/go-jose.v2/json"
-	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
 
 type Config struct {
@@ -90,7 +91,7 @@ func createJWT(jwk *jose.JSONWebKey, claims ...any) (string, error) {
 		builder = builder.Claims(claim)
 	}
 
-	token, err := builder.CompactSerialize()
+	token, err := builder.Serialize()
 	if err != nil {
 		return "", err
 	}

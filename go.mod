@@ -6,6 +6,7 @@ require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.1
 	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/buildkite/go-buildkite/v3 v3.11.0
+	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/google/go-github/v61 v61.0.0
 	github.com/justinas/alice v1.2.0
 	github.com/maypok86/otter v1.2.0
@@ -15,7 +16,6 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.26.0
 	go.opentelemetry.io/otel/sdk v1.26.0
 	go.opentelemetry.io/otel/sdk/metric v1.26.0
-	gopkg.in/go-jose/go-jose.v2 v2.6.2
 )
 
 require (
@@ -36,6 +36,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.2 // indirect
 )
 
 require (
@@ -58,3 +59,6 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// replaced as the OAuth middleware is depending on a version with a published vulnerability
+replace gopkg.in/go-jose/go-jose.v2 v2.6.2 => gopkg.in/go-jose/go-jose.v2 v2.6.3
