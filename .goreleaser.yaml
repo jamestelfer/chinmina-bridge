@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+builds:
+  - id: release
+    binary: chinmina-bridge
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+checksum:
+  name_template: "checksums.txt"
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  use: github-native
+  sort: asc
+
+release:
+  prerelease: auto
+  header: |
+    # chinmina-bridge ({{ .Version }})
+
+    Binaries of this build can be found below, if these are needed.
+
+    The preferred way to consume a release is via its [Docker
+    image](https://hub.docker.com/r/chinmina/chinmina-bridge):
+
+    ```text
+    chinmina/chinmina-bridge:{{ .Tag }}
+    ```
+
+    The image is published for Linux for both x86-64 and ARM-64.
+
+kos:
+  -
+    id: chinmina-bridge
+    build: release
+    working_dir: .
+    base_image: cgr.dev/chainguard/static
+
+    repository: chinmina
+
+    # Platforms to build and publish.
+    #
+    # Default: 'linux/amd64'
+    platforms:
+      - linux/amd64
+      - linux/arm64
+
+    # Tag to build and push.
+    # Empty tags are ignored.
+    #
+    # Default: 'latest'
+    # Templates: allowed
+    tags:
+      - "{{if not .Prerelease}}latest{{end}}"
+      - "{{.Tag}}"
+
+    sbom: spdx
+
+    # Bare uses a tag on the $KO_DOCKER_REPO without anything additional.
+    bare: true
+
+    # Whether to preserve the full import path after the repository name.
+    preserve_import_paths: false
+
+    # Whether to use the base path without the MD5 hash after the repository name.
+    base_import_paths: true
