@@ -3,3 +3,5 @@ ignore:
   - "cmd/create"
   # telemetry configuration
   - "internal/observe/telemetry.go"
+  # bootstrap only
+  - "main.go"
