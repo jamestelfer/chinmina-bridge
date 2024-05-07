@@ -1,0 +1,5 @@
+ignore:
+  # testing utility
+  - "cmd/create"
+  # telemetry configuration
+  - "internal/observe/telemetry.go"
