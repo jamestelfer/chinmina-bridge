@@ -49,7 +49,7 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 		return nil, fmt.Errorf("github configuration failed: %w", err)
 	}
 
-	vendorCache, err := vendor.Cached()
+	vendorCache, err := vendor.Cached(45 * time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
