@@ -66,6 +66,12 @@ func LogErrorHandler() jwtmiddleware.ErrorHandler {
 	}
 }
 
+// ContextWithClaims returns a new context.Context with the provided validated claims
+// added to it. This is primarily for test usage
+func ContextWithClaims(ctx context.Context, claims *validator.ValidatedClaims) context.Context {
+	return context.WithValue(ctx, jwtmiddleware.ContextKey{}, claims)
+}
+
 // ClaimsFromContext returns the validated claims from the context as set by the
 // JWT middleware. This will return nil if the context data is not set. This
 // should be regarded as an error for handlers that expect the claims to be

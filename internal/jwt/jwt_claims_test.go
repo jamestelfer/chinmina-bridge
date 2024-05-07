@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +44,7 @@ func TestContextClaims(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.WithValue(context.Background(), jwtmiddleware.ContextKey{}, tc.claims)
+			ctx := ContextWithClaims(context.Background(), tc.claims)
 			actual := ClaimsFromContext(ctx)
 			assert.Equal(t, tc.claims, actual)
 		})
@@ -93,7 +92,7 @@ func TestCustomClaims(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.WithValue(context.Background(), jwtmiddleware.ContextKey{}, tc.claims)
+			ctx := ContextWithClaims(context.Background(), tc.claims)
 			actual := BuildkiteClaimsFromContext(ctx)
 			assert.Equal(t, tc.expectedCustomClaims, actual)
 		})
@@ -124,7 +123,7 @@ func TestRequiredCustomClaims_Succeeds_With_Custom_Claims(t *testing.T) {
 		PipelineSlug:     "expected-pipeline",
 	}
 
-	ctx := context.WithValue(context.Background(), jwtmiddleware.ContextKey{}, claims)
+	ctx := ContextWithClaims(context.Background(), claims)
 
 	var actualClaims BuildkiteClaims
 	assert.NotPanics(t, func() {
