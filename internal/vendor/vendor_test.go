@@ -76,3 +76,78 @@ func TestVendor_SucceedsWithTokenWhenPossible(t *testing.T) {
 		RepositoryURL:    "repo-url",
 	})
 }
+
+func TestPipelineRepositoryToken_URL(t *testing.T) {
+	testCases := []struct {
+		name          string
+		repositoryURL string
+		expectedURL   string
+		expectedError string
+	}{
+		{
+			name:          "valid absolute URL",
+			repositoryURL: "https://github.com/org/repo",
+			expectedURL:   "https://github.com/org/repo",
+		},
+		{
+			name:          "valid absolute URL with path",
+			repositoryURL: "https://github.com/org/repo/path/to/file",
+			expectedURL:   "https://github.com/org/repo/path/to/file",
+		},
+		{
+			name:          "invalid relative URL",
+			repositoryURL: "org/repo",
+			expectedError: "repository URL must be absolute: org/repo",
+		},
+		{
+			name:          "invalid URL",
+			repositoryURL: "://invalid",
+			expectedError: "parse \"://invalid\": missing protocol scheme",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			token := vendor.PipelineRepositoryToken{RepositoryURL: tc.repositoryURL}
+			url, err := token.URL()
+
+			if tc.expectedError != "" {
+				require.Error(t, err)
+				assert.EqualError(t, err, tc.expectedError)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedURL, url.String())
+			}
+		})
+	}
+}
+
+func TestPipelineRepositoryToken_ExpiryUnix(t *testing.T) {
+	testCases := []struct {
+		name     string
+		expiry   time.Time
+		expected string
+	}{
+		{
+			name:     "UTC time",
+			expiry:   time.Date(2023, 5, 1, 12, 0, 0, 0, time.UTC),
+			expected: "1682942400",
+		},
+		{
+			name:     "+1000 timezone",
+			expiry:   time.Date(2023, 5, 1, 22, 0, 0, 0, time.FixedZone("+1000", 10*60*60)),
+			expected: "1682942400",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			token := vendor.PipelineRepositoryToken{
+				Expiry: tc.expiry,
+			}
+
+			actual := token.ExpiryUnix()
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
