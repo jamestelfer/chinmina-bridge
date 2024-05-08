@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net/url"
 	"strings"
 )
 
@@ -73,4 +74,29 @@ func WriteProperties(props *ArrayMap, w io.Writer) error {
 	b.WriteTo(w)
 
 	return nil
+}
+
+func ConstructRepositoryURL(props *ArrayMap) (string, error) {
+	u := &url.URL{}
+
+	protocol, ok := props.Lookup("protocol")
+	if !ok {
+		return "", errors.New("protocol/scheme must be present")
+	}
+
+	host, ok := props.Lookup("host")
+	if !ok {
+		return "", errors.New("host must be present")
+	}
+
+	path, ok := props.Lookup("path")
+	if !ok {
+		return "", errors.New("path must be present")
+	}
+
+	u.Scheme = protocol
+	u.Host = host
+	u.Path = path
+
+	return u.String(), nil
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/url"
+	"strings"
 
 	"github.com/jamestelfer/chinmina-bridge/internal/credentialhandler"
 	"github.com/jamestelfer/chinmina-bridge/internal/jwt"
@@ -59,18 +59,14 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 			return
 		}
 
-		u, _ := url.Parse("https://github.com")
-		if protocol, ok := requestedRepo.Lookup("protocol"); ok {
-			u.Scheme = protocol
-		}
-		if host, ok := requestedRepo.Lookup("host"); ok {
-			u.Host = host
-		}
-		if path, ok := requestedRepo.Lookup("path"); ok {
-			u.Path = path
+		requestedRepoURL, err := credentialhandler.ConstructRepositoryURL(requestedRepo)
+		if err != nil {
+			log.Info().Msgf("invalid request parameters %v\n", err)
+			requestError(w, http.StatusBadRequest)
+			return
 		}
 
-		tokenResponse, err := tokenVendor(r.Context(), claims, u.String())
+		tokenResponse, err := tokenVendor(r.Context(), claims, requestedRepoURL)
 		if err != nil {
 			log.Info().Msgf("token creation failed %v\n", err)
 			requestError(w, http.StatusInternalServerError)
@@ -79,10 +75,13 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 
 		w.Header().Set("Content-Type", "text/plain")
 
-		// repo mismatch: empty return
+		// Given repository doesn't match the pipeline: empty return this means
+		// that we understand the request but cannot fulfil it: this is a
+		// successful case for a credential helper, so we successfully return
+		// but don't offer credentials.
 		if tokenResponse == nil {
-			w.WriteHeader(http.StatusOK)
 			w.Header().Add("Content-Length", "0")
+			w.WriteHeader(http.StatusOK)
 
 			return
 		}
@@ -98,7 +97,7 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 		props := credentialhandler.NewMap(6)
 		props.Set("protocol", tokenURL.Scheme)
 		props.Set("host", tokenURL.Host)
-		props.Set("path", tokenURL.Path)
+		props.Set("path", strings.TrimPrefix(tokenURL.Path, "/"))
 		props.Set("username", "x-access-token")
 		props.Set("password", tokenResponse.Token)
 		props.Set("password_expiry_utc", tokenResponse.ExpiryUnix())
