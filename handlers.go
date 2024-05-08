@@ -14,6 +14,8 @@ import (
 
 func handlePostToken(tokenVendor vendor.PipelineTokenVendor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer drainRequestBody(r)
+
 		// claims must be present from the middleware
 		claims := jwt.RequireBuildkiteClaimsFromContext(r.Context())
 
@@ -45,9 +47,7 @@ func handlePostToken(tokenVendor vendor.PipelineTokenVendor) http.Handler {
 
 func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Ensure that the request body is fully read prior to returning. This
-		// avoids issues with blocked connections and connection reuse.
-		defer func() { io.Copy(io.Discard, r.Body) }()
+		defer drainRequestBody(r)
 
 		// claims must be present from the middleware
 		claims := jwt.RequireBuildkiteClaimsFromContext(r.Context())
@@ -114,4 +114,15 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 
 func requestError(w http.ResponseWriter, statusCode int) {
 	http.Error(w, http.StatusText(statusCode), statusCode)
+}
+
+// drainRequestBody drains the request body by reading and discarding the contents.
+// This is useful to ensure the request body is fully consumed, which is important
+// for connection reuse in HTTP/1 clients.
+func drainRequestBody(r *http.Request) {
+	if r.Body != nil {
+		// 5kb max: after this we'll assume the client is broken or malicious
+		// and close the connection
+		io.CopyN(io.Discard, r.Body, 5*1024*1024)
+	}
 }
