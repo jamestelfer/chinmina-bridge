@@ -79,8 +79,9 @@ func launchServer() error {
 	}
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: handler,
+		Addr:           fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:        handler,
+		MaxHeaderBytes: 20 << 10, // 20 KB
 	}
 
 	shutdownTelemetry, err := observe.Configure(ctx, cfg.Observe)
