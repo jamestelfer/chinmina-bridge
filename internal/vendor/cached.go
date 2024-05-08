@@ -14,11 +14,11 @@ import (
 // cause multiple token requests, In this case, the last one returned wins. In
 // this use case, given that concurrent calls are likely to be less common, the
 // additional tokens issued are worth gains made skipping locking.
-func Cached() (func(PipelineTokenVendor) PipelineTokenVendor, error) {
+func Cached(ttl time.Duration) (func(PipelineTokenVendor) PipelineTokenVendor, error) {
 	cache, err := otter.
 		MustBuilder[string, PipelineRepositoryToken](10_000).
 		CollectStats().
-		WithTTL(45 * time.Minute).
+		WithTTL(ttl).
 		Build()
 	if err != nil {
 		return nil, err
@@ -32,23 +32,23 @@ func Cached() (func(PipelineTokenVendor) PipelineTokenVendor, error) {
 			// tag.
 			key := claims.PipelineID
 
-			if response, ok := cache.Get(key); ok {
+			if cachedToken, ok := cache.Get(key); ok {
 				// The expected repo may be unknown, but if it's supplied it needs to
 				// match the cached repo. An "unknown" means "give me the token for the
 				// pipeline's repository"; when supplied, a token is request for a given
 				// repo (if possible).
-				if repo == "" || response.RepositoryURL == repo {
-					log.Info().Time("expiry", response.Expiry).
+				if repo == "" || cachedToken.RepositoryURL == repo {
+					log.Info().Time("expiry", cachedToken.Expiry).
 						Str("key", key).
 						Msg("hit: existing token found for pipeline")
 
-					return &response, nil
+					return &cachedToken, nil
 				} else {
-					// Tsoken invalid: remove from cache and fall through to reissue and
-					// re-cache likely to happen if the pipeline's repository is changed.
+					// Token invalid: remove from cache and fall through to reissue.
+					// Re-cache likely to happen if the pipeline's repository was changed.
 					log.Info().
 						Str("key", key).Str("expected", repo).
-						Str("actual", response.RepositoryURL).
+						Str("actual", cachedToken.RepositoryURL).
 						Msg("invalid: cached token issued for different repository")
 
 					// the delete is required as "set" is not guaranteed to write to the cache

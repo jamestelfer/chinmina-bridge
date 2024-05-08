@@ -41,11 +41,9 @@ func TestServeHTTP_StartupError(t *testing.T) {
 	mockServer := MockServer{}
 	mockServer.On("ListenAndServe").Return(expectedErr)
 	mockServer.On("Shutdown", mock.Anything).Return(nil)
-	mockServer.On("RegisterOnShutdown", mock.Anything)
 
 	serverCfg := config.ServerConfig{Port: -1, ShutdownTimeoutSeconds: 25}
-	observeCfg := config.ObserveConfig{Enabled: false}
-	err := serveHTTP(serverCfg, observeCfg, &mockServer)
+	err := serveHTTP(serverCfg, &mockServer)
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
@@ -62,7 +60,6 @@ func TestServeHTTP_ShutdownSignal(t *testing.T) {
 	mockServer := MockServer{}
 	mockServer.On("ListenAndServe").Return(expectedErr).WaitUntil(time.After(5 * time.Second))
 	mockServer.On("Shutdown", mock.Anything).Return(nil)
-	mockServer.On("RegisterOnShutdown", mock.Anything)
 
 	// send termination signal after the mock server has had enough time to start
 	startupTimer, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
@@ -73,8 +70,7 @@ func TestServeHTTP_ShutdownSignal(t *testing.T) {
 	}()
 
 	serverCfg := config.ServerConfig{Port: -1, ShutdownTimeoutSeconds: 25}
-	observeCfg := config.ObserveConfig{Enabled: false}
-	err := serveHTTP(serverCfg, observeCfg, &mockServer)
+	err := serveHTTP(serverCfg, &mockServer)
 
 	require.NoError(t, err)
 
@@ -94,11 +90,9 @@ func TestServeHTTP_GracefulShutdown(t *testing.T) {
 		<-ctx.Done()
 		actualError = ctx.Err()
 	}).Return(errors.New("ignore this"))
-	mockServer.On("RegisterOnShutdown", mock.Anything)
 
 	serverCfg := config.ServerConfig{Port: -1, ShutdownTimeoutSeconds: 1}
-	observeCfg := config.ObserveConfig{Enabled: false}
-	_ = serveHTTP(serverCfg, observeCfg, &mockServer)
+	_ = serveHTTP(serverCfg, &mockServer)
 
 	require.Error(t, actualError)
 	assert.ErrorContains(t, actualError, "context deadline exceeded")

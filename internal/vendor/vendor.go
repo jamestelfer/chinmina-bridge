@@ -34,6 +34,10 @@ func (t PipelineRepositoryToken) URL() (*url.URL, error) {
 		return nil, err
 	}
 
+	if !url.IsAbs() {
+		return nil, fmt.Errorf("repository URL must be absolute: %s", t.RepositoryURL)
+	}
+
 	return url, nil
 }
 

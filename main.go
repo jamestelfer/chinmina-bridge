@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
 	"runtime/debug"
 	"strings"
-	"syscall"
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -23,12 +21,6 @@ import (
 
 	"github.com/justinas/alice"
 )
-
-type AuthServer interface {
-	ListenAndServe() error
-	Shutdown(ctx context.Context) error
-	RegisterOnShutdown(f func())
-}
 
 func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 	// wrap a mux such that HTTP telemetry is configured by default
@@ -49,7 +41,7 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 		return nil, fmt.Errorf("github configuration failed: %w", err)
 	}
 
-	vendorCache, err := vendor.Cached()
+	vendorCache, err := vendor.Cached(45 * time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
@@ -74,6 +66,8 @@ func main() {
 }
 
 func launchServer() error {
+	ctx := context.Background()
+
 	cfg, err := config.Load(context.Background())
 	if err != nil {
 		return fmt.Errorf("configuration load failed: %w", err)
@@ -89,71 +83,22 @@ func launchServer() error {
 		Handler: handler,
 	}
 
-	err = serveHTTP(cfg.Server, cfg.Observe, server)
-	if err != nil {
-		return fmt.Errorf("server failed: %w", err)
-	}
-
-	return nil
-}
-
-func serveHTTP(serverCfg config.ServerConfig, observeConfig config.ObserveConfig, server AuthServer) error {
-	serverCtx := context.Background()
-
-	// capture shutdown signals to allow for graceful shutdown
-	ctx, stop := signal.NotifyContext(serverCtx,
-		syscall.SIGINT, syscall.SIGTERM,
-	)
-	defer stop()
-
-	shutdownTelemetry, err := observe.Configure(serverCtx, observeConfig)
+	shutdownTelemetry, err := observe.Configure(ctx, cfg.Observe)
 	if err != nil {
 		return fmt.Errorf("telemetry bootstrap failed: %w", err)
 	}
 	server.RegisterOnShutdown(func() {
 		log.Info().Msg("telemetry: shutting down")
-		shutdownTelemetry(serverCtx)
+		shutdownTelemetry(ctx)
 		log.Info().Msg("telemetry: shutdown complete")
 	})
 
-	// Start the server in a new goroutine
-	serverErr := make(chan error, 1)
-	go func() {
-		log.Info().Int("port", serverCfg.Port).Msg("starting server")
-		serverErr <- server.ListenAndServe()
-	}()
-
-	var startupError error
-
-	select {
-	case err := <-serverErr:
-		// Error when starting HTTP server.
-		if err != nil && err != http.ErrServerClosed {
-			log.Error().Err(err).Msg("failed to start server")
-		}
-		// save this error to return, keep processing shutdown sequence
-		startupError = err
-	case <-ctx.Done():
-		log.Info().Msg("server shutdown requested")
-		// Stop receiving signal notifications as soon as possible.
-		stop()
-	}
-
-	// Gracefully stop the server, allowing a configurable amount of time for
-	// in-flight requests to complete
-	shutdownTimeout := time.Duration(serverCfg.ShutdownTimeoutSeconds) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
-
-	err = server.Shutdown(ctx)
+	err = serveHTTP(cfg.Server, server)
 	if err != nil {
-		return fmt.Errorf("server shutdown failed: %w", err)
+		return fmt.Errorf("server failed: %w", err)
 	}
 
-	log.Info().Msg("server shutdown complete")
-
-	// if startup failed the error is returned
-	return startupError
+	return nil
 }
 
 func configureLogging() {
