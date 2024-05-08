@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/jamestelfer/chinmina-bridge/internal/credentialhandler"
 	"github.com/jamestelfer/chinmina-bridge/internal/jwt"
 	"github.com/jamestelfer/chinmina-bridge/internal/vendor"
 	"github.com/stretchr/testify/assert"
@@ -54,16 +55,7 @@ func TestHandlers_RequireClaims(t *testing.T) {
 func TestHandlePostToken_ReturnsTokenOnSuccess(t *testing.T) {
 	tokenVendor := tv("expected-token-value")
 
-	ctx := context.Background()
-	ctx = jwt.ContextWithClaims(ctx, &validator.ValidatedClaims{
-		RegisteredClaims: validator.RegisteredClaims{
-			Issuer: "https://buildkite.com",
-		},
-		CustomClaims: &jwt.BuildkiteClaims{
-			OrganizationSlug: "organization-slug",
-			PipelineSlug:     "pipeline-slug",
-		},
-	})
+	ctx := claimsContext()
 
 	req, err := http.NewRequest("POST", "/token", nil)
 	require.NoError(t, err)
@@ -93,16 +85,7 @@ func TestHandlePostToken_ReturnsTokenOnSuccess(t *testing.T) {
 func TestHandlePostToken_ReturnsFailureOnVendorFailure(t *testing.T) {
 	tokenVendor := tvFails(errors.New("vendor failure"))
 
-	ctx := context.Background()
-	ctx = jwt.ContextWithClaims(ctx, &validator.ValidatedClaims{
-		RegisteredClaims: validator.RegisteredClaims{
-			Issuer: "https://buildkite.com",
-		},
-		CustomClaims: &jwt.BuildkiteClaims{
-			OrganizationSlug: "organization-slug",
-			PipelineSlug:     "pipeline-slug",
-		},
-	})
+	ctx := claimsContext()
 
 	req, err := http.NewRequest("POST", "/token", nil)
 	require.NoError(t, err)
@@ -123,18 +106,15 @@ func TestHandlePostToken_ReturnsFailureOnVendorFailure(t *testing.T) {
 func TestHandlePostGitCredentials_ReturnsTokenOnSuccess(t *testing.T) {
 	tokenVendor := tv("expected-token-value")
 
-	ctx := context.Background()
-	ctx = jwt.ContextWithClaims(ctx, &validator.ValidatedClaims{
-		RegisteredClaims: validator.RegisteredClaims{
-			Issuer: "https://buildkite.com",
-		},
-		CustomClaims: &jwt.BuildkiteClaims{
-			OrganizationSlug: "organization-slug",
-			PipelineSlug:     "pipeline-slug",
-		},
-	})
+	ctx := claimsContext()
 
-	body := bytes.NewBufferString("\n\n\n\nuseless-content")
+	m := credentialhandler.NewMap(10)
+	m.Set("protocol", "https")
+	m.Set("host", "github.com")
+	m.Set("path", "org/repo")
+
+	body := &bytes.Buffer{}
+	credentialhandler.WriteProperties(m, body)
 	req, err := http.NewRequest("POST", "/git-credentials", body)
 	require.NoError(t, err)
 
@@ -150,24 +130,109 @@ func TestHandlePostGitCredentials_ReturnsTokenOnSuccess(t *testing.T) {
 	assert.Equal(t, "text/plain", rr.Header().Get("Content-Type"))
 
 	respBody := rr.Body.String()
-	assert.Equal(t, "protocol=https\nhost=github.com\npath=\nusername=x-access-token\npassword=expected-token-value\npassword_expiry_utc=1715104776\n\n", respBody)
+	assert.Equal(t, "protocol=https\nhost=github.com\npath=org/repo\nusername=x-access-token\npassword=expected-token-value\npassword_expiry_utc=1715104776\n\n", respBody)
+}
+
+func TestHandlePostGitCredentials_ReturnsEmptySuccessWhenNoToken(t *testing.T) {
+	tokenVendor := vendor.PipelineTokenVendor(func(_ context.Context, claims jwt.BuildkiteClaims, repoUrl string) (*vendor.PipelineRepositoryToken, error) {
+		return nil, nil
+	})
+
+	ctx := claimsContext()
+
+	m := credentialhandler.NewMap(10)
+	m.Set("protocol", "https")
+	m.Set("host", "github.com")
+	m.Set("path", "org/repo")
+
+	body := &bytes.Buffer{}
+	credentialhandler.WriteProperties(m, body)
+	req, err := http.NewRequest("POST", "/git-credentials", body)
+	require.NoError(t, err)
+
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	// act
+	handler := handlePostGitCredentials(tokenVendor)
+	handler.ServeHTTP(rr, req)
+
+	// assert
+	r := rr.Result()
+	assert.Equal(t, http.StatusOK, r.StatusCode)
+	assert.Equal(t, "text/plain", r.Header.Get("Content-Type"))
+	assert.Equal(t, "0", r.Header.Get("Content-Length"))
+	assert.Equal(t, int64(0), r.ContentLength)
+
+	respBody := rr.Body.String()
+	assert.Equal(t, "", respBody)
+}
+func TestHandlePostGitCredentials_ReturnsFailureOnInvalidRequest(t *testing.T) {
+	tokenVendor := tv("expected-token-value")
+
+	ctx := claimsContext()
+
+	req, err := http.NewRequest("POST", "/git-credentials", nil)
+	require.NoError(t, err)
+
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	// act
+	handler := handlePostGitCredentials(tokenVendor)
+	handler.ServeHTTP(rr, req)
+
+	// assert
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	// important to know that internal details aren't part of the error response
+	assert.Equal(t, "Bad Request\n", rr.Body.String())
+}
+
+func TestHandlePostGitCredentials_ReturnsFailureOnReadFailure(t *testing.T) {
+	tokenVendor := tv("expected-token-value")
+
+	ctx := claimsContext()
+
+	m := credentialhandler.NewMap(10)
+	m.Set("protocol", "https")
+	m.Set("host", "github.com")
+	m.Set("path", "org/repo")
+
+	body := &bytes.Buffer{}
+	credentialhandler.WriteProperties(m, body)
+
+	req, err := http.NewRequest("POST", "/git-credentials", body)
+	require.NoError(t, err)
+
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	// act
+	handler := maxRequestSize(1)(
+		// use the request size limit to force an error in the credentials handler
+		handlePostGitCredentials(tokenVendor),
+	)
+	handler.ServeHTTP(rr, req)
+
+	// assert
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	// important to know that internal details aren't part of the error response
+	assert.Equal(t, "Internal Server Error\n", rr.Body.String())
 }
 
 func TestHandlePostGitCredentials_ReturnsFailureOnVendorFailure(t *testing.T) {
 	tokenVendor := tvFails(errors.New("vendor failure"))
 
-	ctx := context.Background()
-	ctx = jwt.ContextWithClaims(ctx, &validator.ValidatedClaims{
-		RegisteredClaims: validator.RegisteredClaims{
-			Issuer: "https://buildkite.com",
-		},
-		CustomClaims: &jwt.BuildkiteClaims{
-			OrganizationSlug: "organization-slug",
-			PipelineSlug:     "pipeline-slug",
-		},
-	})
+	ctx := claimsContext()
 
-	req, err := http.NewRequest("POST", "/token", nil)
+	m := credentialhandler.NewMap(10)
+	m.Set("protocol", "https")
+	m.Set("host", "github.com")
+	m.Set("path", "org/repo")
+
+	body := &bytes.Buffer{}
+	credentialhandler.WriteProperties(m, body)
+	req, err := http.NewRequest("POST", "/git-credentials", body)
 	require.NoError(t, err)
 
 	req = req.WithContext(ctx)
@@ -199,6 +264,22 @@ func tvFails(err error) vendor.PipelineTokenVendor {
 	return vendor.PipelineTokenVendor(func(_ context.Context, claims jwt.BuildkiteClaims, repoUrl string) (*vendor.PipelineRepositoryToken, error) {
 		return nil, err
 	})
+}
+
+func claimsContext() context.Context {
+	ctx := context.Background()
+
+	ctx = jwt.ContextWithClaims(ctx, &validator.ValidatedClaims{
+		RegisteredClaims: validator.RegisteredClaims{
+			Issuer: "https://buildkite.com",
+		},
+		CustomClaims: &jwt.BuildkiteClaims{
+			OrganizationSlug: "organization-slug",
+			PipelineSlug:     "pipeline-slug",
+		},
+	})
+
+	return ctx
 }
 
 func TestMaxRequestSizeMiddleware(t *testing.T) {

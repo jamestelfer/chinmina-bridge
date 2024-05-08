@@ -211,3 +211,108 @@ func TestWriteProperties(t *testing.T) {
 		})
 	}
 }
+
+func TestConstructURL(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    [][]string
+		expected string
+		failed   bool
+		failure  string
+	}{
+		{
+			name:     "fails on empty",
+			input:    [][]string{},
+			expected: "",
+			failed:   true,
+			failure:  "protocol/scheme must be present",
+		},
+		{
+			name: "fails without scheme",
+			input: [][]string{
+				{"host", "github.com"},
+				{"path", "org/repo.git"},
+			},
+			expected: "",
+			failed:   true,
+			failure:  "protocol/scheme must be present",
+		},
+		{
+			name: "fails without host",
+			input: [][]string{
+				{"protocol", "https"},
+				{"path", "org/repo.git"},
+			},
+			expected: "",
+			failed:   true,
+			failure:  "host must be present",
+		},
+		{
+			name: "fails without path",
+			input: [][]string{
+				{"protocol", "https"},
+				{"host", "github.com"},
+			},
+			expected: "",
+			failed:   true,
+			failure:  "path must be present",
+		},
+		{
+			// validating the correct host is handled elsewhere, outside the
+			// responsibility of this function
+			name: "succeeds with non-Github",
+			input: [][]string{
+				{"protocol", "https"},
+				{"host", "gitlubber.com"},
+				{"path", "org/repo.git"},
+			},
+			expected: "https://gitlubber.com/org/repo.git",
+		},
+		{
+			// the URL may not be correct, but that's OK: the pipeline won't
+			// match and the application can't create a token for it.
+			name: "succeeds with incorrectly formed path",
+			input: [][]string{
+				{"protocol", "https"},
+				{"host", "github.com"},
+				{"path", "org/much-too-long/repo.git"},
+			},
+			expected: "https://github.com/org/much-too-long/repo.git",
+		},
+		{
+			name: "succeeds when correctly formed",
+			input: [][]string{
+				{"protocol", "https"},
+				{"host", "github.com"},
+				{"path", "org/repo.git"},
+			},
+			expected: "https://github.com/org/repo.git",
+		},
+		{
+			name: "succeeds when correctly formed with unknown keys",
+			input: [][]string{
+				{"protocol", "https"},
+				{"host", "github.com"},
+				{"path", "org/repo.git"},
+				{"x-host", "gitgrub.com"},
+				{"hostlike", "unhostly.com"},
+				{"pathymcpathface", "how many paths must we walk down"},
+			},
+			expected: "https://github.com/org/repo.git",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			input := credentialhandler.NewMapFromArray(c.input)
+			url, err := credentialhandler.ConstructRepositoryURL(input)
+			require.Equal(t, err != nil, c.failed, "%v", err)
+
+			if c.failed {
+				assert.ErrorContains(t, err, c.failure)
+			}
+
+			assert.Equal(t, c.expected, url)
+		})
+	}
+}
