@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -198,4 +199,42 @@ func tvFails(err error) vendor.PipelineTokenVendor {
 	return vendor.PipelineTokenVendor(func(_ context.Context, claims jwt.BuildkiteClaims, repoUrl string) (*vendor.PipelineRepositoryToken, error) {
 		return nil, err
 	})
+}
+
+func TestMaxRequestSizeMiddleware(t *testing.T) {
+
+	mw := maxRequestSize(10)
+
+	var readError error
+	var readBytes int64
+
+	innerHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		readBytes, readError = io.CopyN(io.Discard, r.Body, 5*1024*1024)
+
+		status := http.StatusOK
+		if readError != nil {
+			status = http.StatusBadRequest
+		}
+
+		w.WriteHeader(status)
+	})
+
+	handler := mw(innerHandler)
+
+	body := bytes.NewBufferString("0123456789n123456789")
+	req, err := http.NewRequest("POST", "/git-credentials", body)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+
+	// act
+	handler.ServeHTTP(rr, req)
+
+	// assert
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.ErrorContains(t, readError, "http: request body too large")
+	assert.Equal(t, int64(10), readBytes)
+
+	respBody := rr.Body.String()
+	assert.Equal(t, "", respBody)
 }

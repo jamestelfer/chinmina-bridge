@@ -32,7 +32,11 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 		return nil, fmt.Errorf("authorizer configuration failed: %w", err)
 	}
 
-	authorized := alice.New(authorizer)
+	// The request body size is fairly limited to prevent accidental or
+	// deliberate abuse. Given the current API shape, this is not configurable.
+	requestLimitBytes := int64(20 << 10) // 20 KB
+
+	authorized := alice.New(maxRequestSize(requestLimitBytes), authorizer)
 
 	// setup token handler and dependencies
 	bk := buildkite.New(cfg.Buildkite)
