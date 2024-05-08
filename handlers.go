@@ -112,6 +112,12 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 	})
 }
 
+func maxRequestSize(limit int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.MaxBytesHandler(next, limit)
+	}
+}
+
 func requestError(w http.ResponseWriter, statusCode int) {
 	http.Error(w, http.StatusText(statusCode), statusCode)
 }
