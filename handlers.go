@@ -60,13 +60,13 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 		}
 
 		u, _ := url.Parse("https://github.com")
-		if protocol, ok := requestedRepo["protocol"]; ok {
+		if protocol, ok := requestedRepo.Lookup("protocol"); ok {
 			u.Scheme = protocol
 		}
-		if host, ok := requestedRepo["host"]; ok {
+		if host, ok := requestedRepo.Lookup("host"); ok {
 			u.Host = host
 		}
-		if path, ok := requestedRepo["path"]; ok {
+		if path, ok := requestedRepo.Lookup("path"); ok {
 			u.Path = path
 		}
 
@@ -95,14 +95,15 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 			return
 		}
 
-		err = credentialhandler.WriteProperties(map[string]string{
-			"protocol":            tokenURL.Scheme,
-			"host":                tokenURL.Host,
-			"path":                tokenURL.Path,
-			"username":            "x-access-token",
-			"password":            tokenResponse.Token,
-			"password_expiry_utc": tokenResponse.ExpiryUnix(),
-		}, w)
+		props := credentialhandler.NewMap(6)
+		props.Set("protocol", tokenURL.Scheme)
+		props.Set("host", tokenURL.Host)
+		props.Set("path", tokenURL.Path)
+		props.Set("username", "x-access-token")
+		props.Set("password", tokenResponse.Token)
+		props.Set("password_expiry_utc", tokenResponse.ExpiryUnix())
+
+		err = credentialhandler.WriteProperties(props, w)
 		if err != nil {
 			log.Info().Msgf("failed to write response: %v\n", err)
 			requestError(w, http.StatusInternalServerError)

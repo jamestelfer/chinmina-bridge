@@ -15,8 +15,14 @@ import (
 // Note that the Reader may be fully consumed by this method.
 //
 // See also: https://git-scm.com/docs/git-credential#IOFMT
-func ReadProperties(r io.Reader) (map[string]string, error) {
-	pairs := map[string]string{}
+func ReadProperties(r io.Reader) (*ArrayMap, error) {
+	pairs := NewMap(20)
+
+	// FIXME: limit the number of pairs we read in to prevent DoS attacks
+
+	if r == nil {
+		return pairs, nil
+	}
 
 	s := bufio.NewScanner(r)
 
@@ -34,7 +40,7 @@ func ReadProperties(r io.Reader) (map[string]string, error) {
 			continue
 		}
 
-		pairs[k] = v
+		pairs.Set(k, v)
 	}
 
 	if err := s.Err(); err != nil {
@@ -44,10 +50,12 @@ func ReadProperties(r io.Reader) (map[string]string, error) {
 	return pairs, nil
 }
 
-func WriteProperties(props map[string]string, w io.Writer) error {
+func WriteProperties(props *ArrayMap, w io.Writer) error {
 	b := bytes.Buffer{}
+	i := props.Iter()
+	for i.HasNext() {
+		k, v := i.Next()
 
-	for k, v := range props {
 		if k == "" || strings.ContainsAny(k, "\n=\000") {
 			return errors.New("key empty or contains invalid character")
 		}

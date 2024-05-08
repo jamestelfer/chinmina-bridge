@@ -2,6 +2,7 @@ package credentialhandler_test
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
@@ -14,12 +15,17 @@ func TestReadProperties(t *testing.T) {
 	cases := []struct {
 		name     string
 		input    string
-		expected map[string]string
+		expected [][]string
 	}{
+		{
+			name:     "nil handling",
+			input:    "~~nil~~",
+			expected: [][]string{},
+		},
 		{
 			name:     "empty",
 			input:    "",
-			expected: map[string]string{},
+			expected: [][]string{},
 		},
 		{
 			name: "stop at empty line",
@@ -28,8 +34,8 @@ one=1
 
 three=3
 `,
-			expected: map[string]string{
-				"one": "1",
+			expected: [][]string{
+				{"one", "1"},
 			},
 		},
 		{
@@ -39,10 +45,10 @@ one=1
 two=
 three=3
 `,
-			expected: map[string]string{
-				"one":   "1",
-				"two":   "",
-				"three": "3",
+			expected: [][]string{
+				{"one", "1"},
+				{"two", ""},
+				{"three", "3"},
 			},
 		},
 		{
@@ -52,9 +58,9 @@ one=1
 =2
 three=3
 `,
-			expected: map[string]string{
-				"one":   "1",
-				"three": "3",
+			expected: [][]string{
+				{"one", "1"},
+				{"three", "3"},
 			},
 		},
 		{
@@ -64,8 +70,8 @@ one
 two=2
 three
 `,
-			expected: map[string]string{
-				"two": "2",
+			expected: [][]string{
+				{"two", "2"},
 			},
 		},
 		{
@@ -75,23 +81,31 @@ one=1
 two=2
 three=3
 `,
-			expected: map[string]string{
-				"one":   "1",
-				"two":   "2",
-				"three": "3",
+			expected: [][]string{
+				{"one", "1"},
+				{"two", "2"},
+				{"three", "3"},
 			},
 		},
 	}
 
+	inputReader := func(input string) io.Reader {
+		if input == "~~nil~~" { // something of a hack but easier than making it a pointer.
+			return nil
+		}
+
+		input = strings.TrimPrefix(input, "\n")
+		return strings.NewReader(input)
+	}
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			input := strings.TrimPrefix(c.input, "\n")
-
-			r := strings.NewReader(input)
+			r := inputReader(c.input)
 			actual, err := credentialhandler.ReadProperties(r)
 			require.NoError(t, err)
 
-			assert.Equal(t, c.expected, actual)
+			expected := credentialhandler.NewMapFromArray(c.expected)
+			assert.Equal(t, expected, actual)
 		})
 	}
 }
@@ -99,87 +113,87 @@ three=3
 func TestWriteProperties(t *testing.T) {
 	cases := []struct {
 		name     string
-		input    map[string]string
+		input    [][]string
 		expected []string
 		failed   bool
 	}{
 		{
 			name:     "empty",
-			input:    map[string]string{},
+			input:    [][]string{},
 			expected: []string{"", ""},
 		},
 		{
 			name: "handle empty values",
-			input: map[string]string{
-				"one":   "1",
-				"two":   "",
-				"three": "3",
+			input: [][]string{
+				{"one", "1"},
+				{"two", ""},
+				{"three", "3"},
 			},
 			expected: []string{"one=1", "two=", "three=3", "", ""},
 		},
 		{
 			name: "fail empty keys",
-			input: map[string]string{
-				"one":   "1",
-				"":      "2",
-				"three": "3",
+			input: [][]string{
+				{"one", "1"},
+				{"", "2"},
+				{"three", "3"},
 			},
 			expected: []string{""},
 			failed:   true,
 		},
 		{
 			name: "fail invalid key with '\\n'",
-			input: map[string]string{
-				"one\n": "1",
+			input: [][]string{
+				{"one\n", "1"},
 			},
 			expected: []string{""},
 			failed:   true,
 		},
 		{
 			name: "fail invalid key with '\\0'",
-			input: map[string]string{
-				"o\000ne": "1",
+			input: [][]string{
+				{"o\000ne", "1"},
 			},
 			expected: []string{""},
 			failed:   true,
 		},
 		{
 			name: "fail invalid key with '='",
-			input: map[string]string{
-				"on=e": "1",
+			input: [][]string{
+				{"on=e", "1"},
 			},
 			expected: []string{""},
 			failed:   true,
 		},
 		{
 			name: "fail invalid value with \\n",
-			input: map[string]string{
-				"one": "1\n",
+			input: [][]string{
+				{"one", "1\n"},
 			},
 			expected: []string{""},
 			failed:   true,
 		},
 		{
 			name: "fail invalid value with \\0",
-			input: map[string]string{
-				"one": "\0001",
+			input: [][]string{
+				{"one", "\0001"},
 			},
 			expected: []string{""},
 			failed:   true,
 		},
 		{
 			name: "value with '='",
-			input: map[string]string{
-				"one": "=1=",
+			input: [][]string{
+				{"one", "=1="},
 			},
 			expected: []string{"one==1=", "", ""},
 		},
 		{
 			name: "normal",
-			input: map[string]string{
-				"one":   "1",
-				"two":   "2",
-				"three": "3",
+			input: [][]string{
+				{"one", "1"},
+				{"two", "2"},
+				{"three", "3"},
 			},
 			expected: []string{"one=1", "two=2", "three=3", "", ""},
 		},
@@ -189,11 +203,11 @@ func TestWriteProperties(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			w := &bytes.Buffer{}
 
-			err := credentialhandler.WriteProperties(c.input, w)
+			input := credentialhandler.NewMapFromArray(c.input)
+			err := credentialhandler.WriteProperties(input, w)
 			require.Equal(t, err != nil, c.failed, "%v", err)
 
-			// cannot assert order of output as map iteration is non-deterministic
-			assert.ElementsMatch(t, c.expected, strings.Split(w.String(), "\n"), w.String())
+			assert.Equal(t, c.expected, strings.Split(w.String(), "\n"), w.String())
 		})
 	}
 }
