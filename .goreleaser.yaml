@@ -30,8 +30,7 @@ release:
 
     Binaries of this build can be found below, if these are needed.
 
-    The preferred way to consume a release is via its [Docker
-    image](https://hub.docker.com/r/chinmina/chinmina-bridge):
+    The preferred way to consume a release is via its [Docker image](https://hub.docker.com/r/chinmina/chinmina-bridge):
 
     ```text
     chinmina/chinmina-bridge:{{ .Tag }}

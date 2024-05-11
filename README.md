@@ -22,42 +22,6 @@ Credentials format][git-credential-helper].
 [buildkite-oidc]: https://buildkite.com/docs/agent/v3/cli-oidc
 [git-credential-helper]: https://git-scm.com/docs/gitcredentials#_custom_helpers
 
-## Why?
-
-Using a GitHub application to authenticate GitHub actions allows:
-
-1. The use of ephemeral API tokens (they expire after 1 hour).
-2. Tokens can enable a wider set of actions than simple Git operations (e.g. PR
-   comments).
-3. Supplied tokens are scoped to just the resources and actions requested, not
-   to the whole set of repositories and actions allowed for the app.
-4. Additional configuration per repo not required. If the app has access, the
-   agent can request a token for it. No need to create PATs or generate keypairs,
-   and no need to upload them in multiple places.
-
-Also, since the OIDC agent uses Buildkite's OIDC tokens to authorize requests,
-the claims associated with the token can be used to further refine access to a token.
-
-There are two options generally used to authenticate Buildkite agents to GitHub:
-
-1. Via a PAT (owned by a GitHub user) that is saved in the agent S3 secrets bucket
-2. Via a deploy key (registered to a single repository) that is likewise saved to
-   S3.
-
-Each of these have some downsides:
-
-| **PAT**                                 | **Deploy keys**                                           |
-|-----------------------------------------|-----------------------------------------------------------|
-| optional expiry                         | no expiry                                                 |
-| access governed by associated user [^1] | access to single repo                                     |
-| manual creation (generally)             | read or read/write                                        |
-|                                         | may be user-associated [^2]                               |
-
-[^1]: if the user is decommissioned, the PAT is deactivated. The PAT has access to all repos that the
-      issuing user can access.
-[^2]: a registered deploy key can be associated with a user, and deactivated if that user is deactivated.
-      This isn't good if the key is used to authenticate automation that is still required.
-
 ## Overview
 
 `chinmina-bridge` is used by jobs running on a Buildkite agent to request tokens
@@ -95,6 +59,51 @@ sequenceDiagram
     Credential Helper->>-Git: "x-access-token"/app-token
     Git-->>-Buildkite Job: complete
 ```
+
+## Why?
+
+Using a GitHub application to authenticate GitHub actions allows:
+
+1. The use of ephemeral API tokens (they expire after 1 hour).
+2. Tokens can enable a wider set of actions than simple Git operations (e.g. PR
+   comments).
+3. Supplied tokens are scoped to just the resources and actions requested, not
+   to the whole set of repositories and actions allowed for the GitHub
+   application.
+4. Additional Buildkite configuration per repository is not required. If the app
+   has access, the agent can request a token for it. No need to create PATs or
+   generate keypairs, and no need to upload them in multiple places.
+
+Also, since `chinmina-bridge` uses Buildkite's OIDC tokens to authorize requests,
+the claims associated with the token can be used to further refine access to a token.
+
+Github has some [good documentation][gh-deploy-keys] about the pros and cons of
+the application token approach. There are two primary downsides documented:
+
+> - Additional setup is needed to create the GitHub App.
+> - Installation access tokens expire after 1 hour, and so need to be
+>   re-generated, typically on-demand using code.
+
+`chinmina-bridge` solves the second problem, by making token generation for a
+pipeline at build time trivial.
+
+There are two options generally used to authenticate Buildkite agents to GitHub:
+
+1. Via a PAT (owned by a GitHub user) that is saved in the agent S3 secrets bucket
+2. Via a deploy key (registered to a single repository) that is likewise saved to
+   S3.
+
+[gh-deploy-keys]: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#github-app-installation-access-tokens
+
+### What's right for your organization?
+
+To understand what's right for your organization, consider:
+
+- how many pipelines do you have? (That is, how many keys are managed?)
+- how easily are tokens rotated?
+- (related) if the secrets bucket is somehow compromised, how difficult would it be for the organization to respond?
+- if tokens are issued to a user, does a person leaving cause an outage in a build pipeline?
+- what processes/restrictions does your organization have around repository access in GitHub and pipeline creation in Buildkite?
 
 ## Limitations
 
