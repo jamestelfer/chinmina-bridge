@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := build
+
 .PHONY: mod
 mod:
 	go mod download
