@@ -39,7 +39,11 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 	authorized := alice.New(maxRequestSize(requestLimitBytes), authorizer)
 
 	// setup token handler and dependencies
-	bk := buildkite.New(cfg.Buildkite)
+	bk, err := buildkite.New(cfg.Buildkite)
+	if err != nil {
+		return nil, fmt.Errorf("buildkite configuration failed: %w", err)
+	}
+
 	gh, err := github.New(cfg.Github)
 	if err != nil {
 		return nil, fmt.Errorf("github configuration failed: %w", err)
