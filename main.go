@@ -77,6 +77,8 @@ func launchServer() error {
 		return fmt.Errorf("configuration load failed: %w", err)
 	}
 
+	http.DefaultTransport = configureHttpTransport(cfg.Server)
+
 	handler, err := configureServerRoutes(cfg)
 	if err != nil {
 		return fmt.Errorf("server routing configuration failed: %w", err)
@@ -130,4 +132,13 @@ func logBuildInfo() {
 	}
 
 	ev.Msg("build information")
+}
+
+func configureHttpTransport(cfg config.ServerConfig) *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	transport.MaxIdleConns = cfg.OutgoingHttpMaxIdleConns
+	transport.MaxConnsPerHost = cfg.OutgoingHttpMaxConnsPerHost
+
+	return transport
 }
