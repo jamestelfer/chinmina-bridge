@@ -54,7 +54,7 @@ func Configure(ctx context.Context, cfg config.ObserveConfig) (shutdown func(con
 
 	exporters := configuredExporters(cfg)
 
-	tracerProvider, err := newTraceProvider(ctx, exporters)
+	tracerProvider, err := newTraceProvider(ctx, cfg, exporters)
 	if err != nil {
 		handleErr(err)
 		return
@@ -62,13 +62,15 @@ func Configure(ctx context.Context, cfg config.ObserveConfig) (shutdown func(con
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	meterProvider, err := newMeterProvider(ctx, exporters)
-	if err != nil {
-		handleErr(err)
-		return
+	if cfg.MetricsEnabled {
+		meterProvider, err := newMeterProvider(ctx, cfg, exporters)
+		if err != nil {
+			handleErr(err)
+			return shutdown, err
+		}
+		shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+		otel.SetMeterProvider(meterProvider)
 	}
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	otel.SetMeterProvider(meterProvider)
 
 	return
 }
@@ -92,8 +94,7 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTraceProvider(ctx context.Context, e exporters) (*trace.TracerProvider, error) {
-
+func newTraceProvider(ctx context.Context, cfg config.ObserveConfig, e exporters) (*trace.TracerProvider, error) {
 	traceExporter, err := e.Trace(ctx)
 	if err != nil {
 		return nil, err
@@ -103,7 +104,7 @@ func newTraceProvider(ctx context.Context, e exporters) (*trace.TracerProvider, 
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName("github-buildkite-oidc-bridge"), //CONFIGURE
+			semconv.ServiceName(cfg.ServiceName),
 		),
 	)
 	if err != nil {
@@ -112,15 +113,14 @@ func newTraceProvider(ctx context.Context, e exporters) (*trace.TracerProvider, 
 
 	traceProvider := trace.NewTracerProvider(
 		trace.WithBatcher(traceExporter,
-			// FIXME this should be configurable with 1m default
-			trace.WithBatchTimeout(time.Second),
+			trace.WithBatchTimeout(time.Duration(cfg.TraceBatchTimeoutSeconds)*time.Second),
 		),
 		trace.WithResource(r),
 	)
 	return traceProvider, nil
 }
 
-func newMeterProvider(ctx context.Context, e exporters) (*metric.MeterProvider, error) {
+func newMeterProvider(ctx context.Context, cfg config.ObserveConfig, e exporters) (*metric.MeterProvider, error) {
 	metricExporter, err := e.Metric(ctx)
 	if err != nil {
 		return nil, err
@@ -128,9 +128,9 @@ func newMeterProvider(ctx context.Context, e exporters) (*metric.MeterProvider, 
 
 	meterProvider := metric.NewMeterProvider(
 		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			// FIXME this should be configurable with 1m default
-			metric.WithInterval(20*time.Second))),
+			metric.WithInterval(time.Duration(cfg.MetricReadIntervalSeconds)*time.Second))),
 	)
+
 	return meterProvider, nil
 }
 
