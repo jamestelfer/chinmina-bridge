@@ -13,22 +13,25 @@ type Multiplexer interface {
 
 type Mux struct {
 	wrapped Multiplexer
-	handler http.Handler
 }
 
 func NewMux(wrapped Multiplexer) *Mux {
 	return &Mux{
 		wrapped: wrapped,
-		handler: otelhttp.NewHandler(wrapped, "/"),
 	}
 }
 
 func (mux *Mux) Handle(pattern string, handler http.Handler) {
-	// Configure the "http.route" for the HTTP instrumentation.
-	taggedHandler := otelhttp.WithRouteTag(pattern, handler)
+	// Configure the standard OTel handler along with route tagging for this
+	// path
+	taggedHandler := otelhttp.NewHandler(
+		otelhttp.WithRouteTag(pattern, handler),
+		pattern,
+	)
+
 	mux.wrapped.Handle(pattern, taggedHandler)
 }
 
 func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	mux.handler.ServeHTTP(w, r)
+	mux.wrapped.ServeHTTP(w, r)
 }

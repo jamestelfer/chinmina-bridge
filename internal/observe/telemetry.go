@@ -3,10 +3,14 @@ package observe
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptrace"
 	"time"
 
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -73,6 +77,31 @@ func Configure(ctx context.Context, cfg config.ObserveConfig) (shutdown func(con
 	}
 
 	return
+}
+
+func HttpTransport(wrapped http.RoundTripper, cfg config.ObserveConfig) http.RoundTripper {
+	if !cfg.Enabled || !cfg.HttpTransportEnabled {
+		return wrapped
+	}
+
+	var clientTraceOptionFunc func(context.Context) *httptrace.ClientTrace
+
+	if cfg.HttpConnectionTraceEnabled {
+		clientTraceOptionFunc = clientHttpTrace
+	}
+
+	return otelhttp.NewTransport(
+		wrapped,
+		otelhttp.WithClientTrace(clientTraceOptionFunc),
+	)
+}
+
+func clientHttpTrace(ctx context.Context) *httptrace.ClientTrace {
+	return otelhttptrace.NewClientTrace(
+		ctx,
+		otelhttptrace.WithoutSubSpans(),
+		otelhttptrace.WithoutHeaders(),
+	)
 }
 
 func configuredExporters(cfg config.ObserveConfig) exporters {

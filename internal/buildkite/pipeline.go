@@ -2,8 +2,9 @@ package buildkite
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"net/http"
 	"net/url"
 
 	"github.com/buildkite/go-buildkite/v3/buildkite"
@@ -11,30 +12,32 @@ import (
 )
 
 type PipelineLookup struct {
-	client *buildkite.Client
+	token  string
+	apiURL *url.URL
 }
 
-func New(cfg config.BuildkiteConfig) PipelineLookup {
-	transport, err := buildkite.NewTokenConfig(cfg.Token, false)
-	if err != nil {
-		log.Fatalf("client config failed: %s", err)
+func New(cfg config.BuildkiteConfig) (p PipelineLookup, err error) {
+	if cfg.Token == "" {
+		err = errors.New("token must be configured for Buildkite API access")
+		return
 	}
-
-	client := buildkite.NewClient(transport.Client())
+	p.token = cfg.Token
 
 	if cfg.ApiURL != "" {
-		url, _ := url.Parse(cfg.ApiURL)
-		transport.APIHost = url.Host
-		client.BaseURL, _ = url.Parse(cfg.ApiURL)
+		u, perr := url.Parse(cfg.ApiURL)
+		if perr != nil {
+			err = fmt.Errorf("could not parse Buildkite API URL: %w", perr)
+			return
+		}
+		p.apiURL = u
 	}
 
-	return PipelineLookup{
-		client,
-	}
+	return
 }
 
 func (p PipelineLookup) RepositoryLookup(ctx context.Context, organizationSlug, pipelineSlug string) (string, error) {
-	pipeline, _, err := p.client.Pipelines.Get(organizationSlug, pipelineSlug)
+	client := p.createClient(ctx)
+	pipeline, _, err := client.Pipelines.Get(organizationSlug, pipelineSlug)
 	if err != nil {
 		return "", fmt.Errorf("failed to get pipeline called %s/%s: %w", organizationSlug, pipelineSlug, err)
 
@@ -46,4 +49,38 @@ func (p PipelineLookup) RepositoryLookup(ctx context.Context, organizationSlug, 
 	}
 
 	return *repo, nil
+}
+
+// createClient creates a new Buildkite API client. A client is required for
+// every invocation, so the current context can be included in the request.
+// Without this, HTTP client traces are not attached to their parent request.
+func (p PipelineLookup) createClient(ctx context.Context) *buildkite.Client {
+	def := http.DefaultTransport
+
+	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		req = req.WithContext(ctx)
+		return def.RoundTrip(req)
+	})
+
+	transport := buildkite.TokenAuthTransport{
+		APIToken:  p.token,
+		Transport: rt,
+	}
+
+	client := buildkite.NewClient(
+		transport.Client(),
+	)
+
+	if p.apiURL != nil {
+		transport.APIHost = p.apiURL.Host
+		client.BaseURL = p.apiURL
+	}
+
+	return client
+}
+
+type roundTripperFunc func(req *http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
