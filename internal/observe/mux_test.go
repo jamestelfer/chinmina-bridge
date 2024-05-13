@@ -26,7 +26,7 @@ func TestHandleRouteTag(t *testing.T) {
 
 		routeLabels = labels.Get()
 	})
-	mux.Handle("/test", testHandler)
+	mux.Handle("GET /test", testHandler)
 
 	recorder := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -35,5 +35,5 @@ func TestHandleRouteTag(t *testing.T) {
 	mux.ServeHTTP(recorder, req)
 
 	assert.Equal(t, http.StatusOK, recorder.Code, "Expected HTTP status OK")
-	assert.Equal(t, []attribute.KeyValue{attribute.String("http.route", "/test")}, routeLabels)
+	assert.Equal(t, []attribute.KeyValue{attribute.String("http.route", "GET /test")}, routeLabels)
 }
