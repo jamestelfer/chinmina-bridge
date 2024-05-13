@@ -62,17 +62,45 @@ sequenceDiagram
 
 ## Why?
 
+There are two options generally used to authenticate Buildkite agents to GitHub:
+
+1. Via a PAT (owned by a GitHub user) that is saved in the agent S3 secrets bucket
+2. Via a deploy key (registered to a single repository) that is likewise saved to
+   S3.
+
+As the organization scales however, the overhead of managing them becomes
+unwieldy, and it can be quite difficult for an organisation to successfully
+manage a rotation scheme.
+
+Unless centralized issuance is practiced as well, both of these schemes can
+produce tokens that are tied to a user, leading to unexpected problems when a
+user leaves the organization. There is also the potential for key material to be
+stored or shared incorrectly, leading to increased possibility of accidental
+leakage.
+
+Lastly, all key material is typically stored in an S3 bucket. This is
+straightforward to configure and maintain, but creates a significant issue in
+the event of an account/bucket breach.
+
 Using a GitHub application to authenticate GitHub actions allows:
 
-1. The use of ephemeral API tokens (they expire after 1 hour).
-2. Tokens can enable a wider set of actions than simple Git operations (e.g. PR
-   comments).
-3. Supplied tokens are scoped to just the resources and actions requested, not
-   to the whole set of repositories and actions allowed for the GitHub
-   application.
-4. Additional Buildkite configuration per repository is not required. If the app
-   has access, the agent can request a token for it. No need to create PATs or
-   generate keypairs, and no need to upload them in multiple places.
+1. Access keys for repositories are generated on demand and expire after one
+   hour.
+1. The generated tokens are only kept by a build agent for the duration of the
+   step, and do not require any other persistence.
+1. The private key for the GitHub application is specific to the
+   `chinmina-bridge` service. It can (and should) be rotated, an operation that
+   is easy to perform.
+1. Supplied tokens are scoped to just the repositories and actions necessary for
+   the requesting pipeline.
+1. Additional Buildkite configuration per repository is not required. If the
+   application has access, the agent can request a token for it. No need to
+   create PATs or generate keypairs, and no need to upload them in multiple
+   places. This allows the an organization to have tighter access control on
+   pipeline setup without creating additional support overhead.
+1. Tokens can enable a wider set of actions than simple Git operations (e.g. PR
+   comments). This is not yet implemented in `chinmina-bridge`, but is a high
+   priority for future enhancement.
 
 Also, since `chinmina-bridge` uses Buildkite's OIDC tokens to authorize requests,
 the claims associated with the token can be used to further refine access to a token.
@@ -87,11 +115,6 @@ the application token approach. There are two primary downsides documented:
 `chinmina-bridge` solves the second problem, by making token generation for a
 pipeline at build time trivial.
 
-There are two options generally used to authenticate Buildkite agents to GitHub:
-
-1. Via a PAT (owned by a GitHub user) that is saved in the agent S3 secrets bucket
-2. Via a deploy key (registered to a single repository) that is likewise saved to
-   S3.
 
 [gh-deploy-keys]: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#github-app-installation-access-tokens
 
@@ -108,21 +131,29 @@ To understand what's right for your organization, consider:
 ## Limitations
 
 - can only grant `contents:read` access
-- the app will allow access to any repository it has access to if it's
-  associated with the pipeline
-  - potential elevation of privilege
-  - OK if your organization members have read access
-  - OK if your organization controls the creation of pipelines
+- will only grant access to the repository associated with a pipeline
+- if the buildkite user has permissions to modify the pipeline repository, they
+  may configure a repository that they don't have access to in GitHub (but is
+  accessible in the app). This would allow them to potentially extract code via
+  use of the pipeline step configuration. **BUT**:
+  - it's OK if your organization members have read access to the same set of
+    repositories covered by the `chinmina-bridge` GitHub application.<br>
+    **OR**
+  - it's OK if your organization controls the creation/configuration of
+    pipelines: this restricts the opportunity to misconfigure a pipeline.
 
 ## Configuration
 
 Requirements:
 
-1. Buildkite organization, ability to create an API token
-1. Github organization with permissions to create a Github App and install it into the organization
-1. Ability to deploy a server that can be accessed by the build agents
-1. Ability to allow Buildkite agents to download and use a custom plugin
-1. (Optional) Ability to manage the configuration of agent hooks
+1. A Buildkite organization, and a user with sufficient access to create an API
+   token that can be used to get the details of any pipeline that is expected to
+   be built.
+1. A Github organization, and a user with sufficient permissions to create a
+   Github App and install it into the organization.
+1. Ability to deploy a server that can be accessed by the build agents (for example, an ECS service)
+1. Ability to allow Buildkite agents to download and use a custom plugin _or_
+   ability to add a plugin to the default settings of the Buildkite agents.
 
 ### Buildkite setup
 
