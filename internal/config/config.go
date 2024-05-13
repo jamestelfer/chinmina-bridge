@@ -42,8 +42,12 @@ type GithubConfig struct {
 }
 
 type ObserveConfig struct {
-	Enabled bool   `env:"OBSERVE_ENABLED, default=false"`
-	Type    string `env:"OBSERVE_TYPE, default=grpc"`
+	Enabled                   bool   `env:"OBSERVE_ENABLED, default=false"`
+	MetricsEnabled            bool   `env:"OBSERVE_METRICS_ENABLED, default=true"`
+	Type                      string `env:"OBSERVE_TYPE, default=grpc"`
+	ServiceName               string `env:"OBSERVE_SERVICE_NAME, default=chinmina-bridge"`
+	TraceBatchTimeoutSeconds  int    `env:"OBSERVE_TRACE_BATCH_TIMEOUT_SECS, default=20"`
+	MetricReadIntervalSeconds int    `env:"OBSERVE_METRIC_READ_INTERVAL_SECS, default=60"`
 }
 
 func Load(ctx context.Context) (cfg Config, err error) {
