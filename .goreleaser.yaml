@@ -26,9 +26,7 @@ changelog:
 release:
   prerelease: auto
   header: |
-    # chinmina-bridge ({{ .Version }})
-
-    Binaries of this build can be found below, if these are needed.
+    Distributions for this release are published as binaries and a Docker image.
 
     The preferred way to consume a release is via its [Docker image](https://hub.docker.com/r/chinmina/chinmina-bridge):
 
@@ -36,7 +34,9 @@ release:
     chinmina/chinmina-bridge:{{ .Tag }}
     ```
 
-    The image is published for Linux for both x86-64 and ARM-64.
+    The multi-platform image is published for Linux x86-64 and Linux ARM-64.
+
+    If needed, binaries of this build (including Mac) can be found below.
 
 kos:
   -
