@@ -77,23 +77,33 @@ func launchServer() error {
 		return fmt.Errorf("configuration load failed: %w", err)
 	}
 
-	http.DefaultTransport = configureHttpTransport(cfg.Server)
+	// configure telemetry, including wrapping default HTTP client
+	shutdownTelemetry, err := observe.Configure(ctx, cfg.Observe)
+	if err != nil {
+		return fmt.Errorf("telemetry bootstrap failed: %w", err)
+	}
 
+	http.DefaultTransport = observe.HttpTransport(
+		configureHttpTransport(cfg.Server),
+		cfg.Observe,
+	)
+	http.DefaultClient = &http.Client{
+		Transport: http.DefaultTransport,
+	}
+
+	// setup routing and dependencies
 	handler, err := configureServerRoutes(cfg)
 	if err != nil {
 		return fmt.Errorf("server routing configuration failed: %w", err)
 	}
 
+	// start the server
 	server := &http.Server{
 		Addr:           fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:        handler,
 		MaxHeaderBytes: 20 << 10, // 20 KB
 	}
 
-	shutdownTelemetry, err := observe.Configure(ctx, cfg.Observe)
-	if err != nil {
-		return fmt.Errorf("telemetry bootstrap failed: %w", err)
-	}
 	server.RegisterOnShutdown(func() {
 		log.Info().Msg("telemetry: shutting down")
 		shutdownTelemetry(ctx)

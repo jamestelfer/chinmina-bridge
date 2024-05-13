@@ -1,6 +1,6 @@
 module github.com/jamestelfer/chinmina-bridge
 
-go 1.22.3
+go 1.22
 
 require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.1
@@ -41,6 +41,7 @@ require (
 
 require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.51.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0
 	go.opentelemetry.io/otel v1.26.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.26.0
