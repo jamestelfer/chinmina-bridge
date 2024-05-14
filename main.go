@@ -58,6 +58,13 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 
 	mux.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
 	mux.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
+	mux.Handle("GET /healthcheck", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer drainRequestBody(r)
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}))
 
 	return mux, nil
 }
