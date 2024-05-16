@@ -167,6 +167,7 @@ func TestHandlePostGitCredentials_ReturnsEmptySuccessWhenNoToken(t *testing.T) {
 	respBody := rr.Body.String()
 	assert.Equal(t, "", respBody)
 }
+
 func TestHandlePostGitCredentials_ReturnsFailureOnInvalidRequest(t *testing.T) {
 	tokenVendor := tv("expected-token-value")
 
@@ -246,6 +247,27 @@ func TestHandlePostGitCredentials_ReturnsFailureOnVendorFailure(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 	// important to know that internal details aren't part of the error response
 	assert.Equal(t, "Internal Server Error\n", rr.Body.String())
+}
+
+func TestHandleHealthCheck_Success(t *testing.T) {
+	ctx := context.Background()
+
+	req, err := http.NewRequest("GET", "/healthcheck", nil)
+	require.NoError(t, err)
+
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	// act
+	handler := handleHealthCheck()
+	handler.ServeHTTP(rr, req)
+
+	// assert
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "text/plain", rr.Header().Get("Content-Type"))
+
+	respBody := rr.Body.String()
+	assert.Equal(t, "OK", respBody)
 }
 
 func tv(token string) vendor.PipelineTokenVendor {
