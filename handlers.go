@@ -111,6 +111,16 @@ func handlePostGitCredentials(tokenVendor vendor.PipelineTokenVendor) http.Handl
 	})
 }
 
+func handleHealthCheck() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer drainRequestBody(r)
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+}
+
 func maxRequestSize(limit int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.MaxBytesHandler(next, limit)

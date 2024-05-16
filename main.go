@@ -24,7 +24,8 @@ import (
 
 func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 	// wrap a mux such that HTTP telemetry is configured by default
-	mux := observe.NewMux(http.NewServeMux())
+	muxWithoutTelemetry := http.NewServeMux()
+	mux := observe.NewMux(muxWithoutTelemetry)
 
 	// configure middleware
 	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
@@ -58,13 +59,9 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 
 	mux.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
 	mux.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
-	mux.Handle("GET /healthcheck", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer drainRequestBody(r)
 
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	}))
+	// healthchecks are not included in telemetry
+	muxWithoutTelemetry.Handle("GET /healthcheck", handleHealthCheck())
 
 	return mux, nil
 }
@@ -144,7 +141,6 @@ func logBuildInfo() {
 	}
 	ev := log.Info()
 	for _, v := range buildInfo.Settings {
-
 		if strings.HasPrefix(v.Key, "vcs.") ||
 			strings.HasPrefix(v.Key, "GO") ||
 			v.Key == "CGO_ENABLED" {
