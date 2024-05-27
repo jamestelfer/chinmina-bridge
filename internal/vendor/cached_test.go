@@ -30,6 +30,29 @@ func TestCacheMissOnFirstRequest(t *testing.T) {
 	assert.Equal(t, "first-call", token.Token)
 }
 
+func TestCacheMissWithNilResponse(t *testing.T) {
+	wrapped := sequenceVendor("first-call", nil)
+
+	c, err := vendor.Cached(defaultTTL)
+	require.NoError(t, err)
+
+	v := c(wrapped)
+
+	// first call misses cache
+	token, err := v(context.Background(), jwt.BuildkiteClaims{PipelineID: "pipeline-id"}, "any-repo")
+	require.NoError(t, err)
+	assert.Equal(t, &vendor.PipelineRepositoryToken{
+		Token:         "first-call",
+		RepositoryURL: "any-repo",
+		PipelineSlug:  "pipeline-id",
+	}, token)
+
+	// second call misses and returns nil
+	token, err = v(context.Background(), jwt.BuildkiteClaims{PipelineID: "pipeline-id-not-recognized"}, "any-repo")
+	require.NoError(t, err)
+	assert.Nil(t, token)
+}
+
 func TestCacheHitOnSecondRequest(t *testing.T) {
 	wrapped := sequenceVendor("first-call", "second-call")
 
@@ -191,9 +214,7 @@ func (e E) Error() string {
 }
 
 // sequenceVendor returns each of the calls in sequence, either a token or an error
-func sequenceVendor[T interface {
-	string | E
-}](calls ...T) vendor.PipelineTokenVendor {
+func sequenceVendor(calls ...any) vendor.PipelineTokenVendor {
 	callIndex := 0
 
 	return vendor.PipelineTokenVendor(func(ctx context.Context, claims jwt.BuildkiteClaims, repo string) (*vendor.PipelineRepositoryToken, error) {
@@ -204,7 +225,11 @@ func sequenceVendor[T interface {
 		var token *vendor.PipelineRepositoryToken
 		var err error
 
-		switch v := any(calls[callIndex]).(type) {
+		c := calls[callIndex]
+
+		switch v := any(c).(type) {
+		case nil:
+			// all nil return
 		case string:
 			token = &vendor.PipelineRepositoryToken{
 				Token:         v,

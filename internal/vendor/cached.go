@@ -62,7 +62,11 @@ func Cached(ttl time.Duration) (func(PipelineTokenVendor) PipelineTokenVendor, e
 				return nil, err
 			}
 
-			cache.Set(key, *token)
+			// token can be nil if the vendor wishes to indicate that there's neither
+			// a token nor an error
+			if token != nil {
+				cache.Set(key, *token)
+			}
 
 			return token, nil
 		}
