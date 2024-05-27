@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -60,6 +61,9 @@ func New(
 			return nil, fmt.Errorf("could not find repository for pipeline %s: %w", claims.PipelineSlug, err)
 		}
 
+		// allow HTTPS credentials if the pipeline is configured for an equivalent SSH URL
+		pipelineRepoURL = TranslateSSHToHTTPS(pipelineRepoURL)
+
 		if requestedRepoURL != "" && pipelineRepoURL != requestedRepoURL {
 			// git is asking for a different repo than we can handle: return nil
 			// to indicate that the handler should return a successful (but
@@ -88,4 +92,15 @@ func New(
 			Expiry:           expiry,
 		}, nil
 	}
+}
+
+var sshUrl = regexp.MustCompile(`^git@github.com:([^/].+)$`)
+
+func TranslateSSHToHTTPS(url string) string {
+	groups := sshUrl.FindStringSubmatch(url)
+	if groups == nil {
+		return url
+	}
+
+	return fmt.Sprintf("https://github.com/%s", groups[1])
 }
