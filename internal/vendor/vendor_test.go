@@ -151,3 +151,69 @@ func TestPipelineRepositoryToken_ExpiryUnix(t *testing.T) {
 		})
 	}
 }
+
+func TestTransformSSHToHTTPS(t *testing.T) {
+	testCases := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "ssh, valid GitHub",
+			url:      "git@github.com:organization/chinmina.git",
+			expected: "https://github.com/organization/chinmina.git",
+		},
+		{
+			name:     "ssh, no user",
+			url:      "github.com:organization/chinmina.git",
+			expected: "github.com:organization/chinmina.git",
+		},
+		{
+			name:     "ssh, different host",
+			url:      "git@githab.com:organization/chinmina.git",
+			expected: "git@githab.com:organization/chinmina.git",
+		},
+		{
+			name:     "ssh, invalid path specifier",
+			url:      "git@github.com/organization/chinmina.git",
+			expected: "git@github.com/organization/chinmina.git",
+		},
+		{
+			name:     "ssh, zero length path",
+			url:      "git@github.com:",
+			expected: "git@github.com:",
+		},
+		{
+			name:     "ssh, no extension",
+			url:      "git@github.com:organization/chinmina",
+			expected: "https://github.com/organization/chinmina",
+		},
+		{
+			name:     "https, valid",
+			url:      "https://github.com/organization/chinmina.git",
+			expected: "https://github.com/organization/chinmina.git",
+		},
+		{
+			name:     "https, nonsense",
+			url:      "https://github.com/organization/chinmina.git",
+			expected: "https://github.com/organization/chinmina.git",
+		},
+		{
+			name:     "http, valid",
+			url:      "http://github.com/organization/chinmina.git",
+			expected: "http://github.com/organization/chinmina.git",
+		},
+		{
+			name:     "pure nonsense",
+			url:      "molybdenum://mo",
+			expected: "molybdenum://mo",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := vendor.TranslateSSHToHTTPS(tc.url)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
