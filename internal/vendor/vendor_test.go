@@ -174,6 +174,11 @@ func TestTransformSSHToHTTPS(t *testing.T) {
 			expected: "git@githab.com:organization/chinmina.git",
 		},
 		{
+			name:     "ssh, another different host",
+			url:      "git@githubxcom:organization/chinmina.git",
+			expected: "git@githubxcom:organization/chinmina.git",
+		},
+		{
 			name:     "ssh, invalid path specifier",
 			url:      "git@github.com/organization/chinmina.git",
 			expected: "git@github.com/organization/chinmina.git",
@@ -195,8 +200,8 @@ func TestTransformSSHToHTTPS(t *testing.T) {
 		},
 		{
 			name:     "https, nonsense",
-			url:      "https://github.com/organization/chinmina.git",
-			expected: "https://github.com/organization/chinmina.git",
+			url:      "https://githubxcom/passthrough.git",
+			expected: "https://githubxcom/passthrough.git",
 		},
 		{
 			name:     "http, valid",
