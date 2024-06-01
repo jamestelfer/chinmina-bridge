@@ -42,6 +42,7 @@ services:
       # Jaeger standalone doesn't support metrics
       - OBSERVE_METRICS_ENABLED=false
       - OBSERVE_TYPE=grpc
+      - OBSERVE_OTEL_LOG_LEVEL=debug
     volumes:
       - "..:/src"
 
