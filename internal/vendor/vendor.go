@@ -94,7 +94,7 @@ func New(
 	}
 }
 
-var sshUrl = regexp.MustCompile(`^git@github.com:([^/].+)$`)
+var sshUrl = regexp.MustCompile(`^git@github\.com:([^/].+)$`)
 
 func TranslateSSHToHTTPS(url string) string {
 	groups := sshUrl.FindStringSubmatch(url)
