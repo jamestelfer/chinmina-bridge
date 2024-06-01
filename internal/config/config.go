@@ -42,6 +42,7 @@ type GithubConfig struct {
 }
 
 type ObserveConfig struct {
+	SDKLogLevel                string `env:"OBSERVE_OTEL_LOG_LEVEL, default=info"`
 	Enabled                    bool   `env:"OBSERVE_ENABLED, default=false"`
 	MetricsEnabled             bool   `env:"OBSERVE_METRICS_ENABLED, default=true"`
 	Type                       string `env:"OBSERVE_TYPE, default=grpc"`

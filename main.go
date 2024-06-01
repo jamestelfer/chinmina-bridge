@@ -127,10 +127,18 @@ func launchServer() error {
 }
 
 func configureLogging() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	// Set global level to the minimum: allows the Open Telemetry logging to be
+	// configured separately. However, it means that any logger that sets its
+	// level will log as this effectively disables the global level.
+	zerolog.SetGlobalLevel(zerolog.Level(-128))
+
+	// default level is Info
+	log.Logger = log.Level(zerolog.InfoLevel)
+
 	if os.Getenv("ENV") == "development" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		log.Logger = log.
+			Output(zerolog.ConsoleWriter{Out: os.Stdout}).
+			Level(zerolog.DebugLevel)
 	}
 }
 
