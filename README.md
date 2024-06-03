@@ -10,8 +10,9 @@ tokens][github-app-tokens]. Requests are authorized with a [Buildkite
 OIDC][buildkite-oidc] token, allowing a token to be created just for the
 repository associated with an executing pipeline.
 
-The token is created with `contents:read` permissions, and only has access to
-the repository associated with the executing pipeline.
+The token is created with `contents:read` permissions by default, and only has
+access to the repository associated with the executing pipeline. The permissions
+can be modified with [Environment Variables](#variables).
 
 Two endpoints are exposed: `/token`, which returns a token and its expiry, and
 `/git-credentials`, which returns the token and repository metadata in the [Git
@@ -130,7 +131,6 @@ To understand what's right for your organization, consider:
 
 ## Limitations
 
-- can only grant `contents:read` access
 - will only grant access to the repository associated with a pipeline
 - if the buildkite user has permissions to modify the pipeline repository, they
   may configure a repository that they don't have access to in GitHub (but is
@@ -205,6 +205,24 @@ variables, and can be deployed to a server or as a container.
 
 - `BUILDKITE_API_TOKEN` (**required**): The API token created for pipeline
   metadata lookups. **Store securely and provide to the container securely.**
+
+**Buildkite Variables for GitHub Permissions**
+
+Set each environment variable to "read" or "write". If omitted, the permission
+will be ignored. The default permission `contents:read` will always be set.
+
+- `GITHUB_PERMISSIONS_ACTIONS`
+- `GITHUB_PERMISSIONS_CHECKS`
+- `GITHUB_PERMISSIONS_CONTENTS`
+- `GITHUB_PERMISSIONS_DEPLOYMENTS`
+- `GITHUB_PERMISSIONS_ISSUES`
+- `GITHUB_PERMISSIONS_METADATA`
+- `GITHUB_PERMISSIONS_PACKAGES`
+- `GITHUB_PERMISSIONS_PAGES`
+- `GITHUB_PERMISSIONS_PULL_REQUESTS`
+- `GITHUB_PERMISSIONS_REPOSITORY_PROJECTS`
+- `GITHUB_PERMISSIONS_SECURITY_EVENTS`
+- `GITHUB_PERMISSIONS_STATUSES`
 
 **GitHub API connectivity**
 

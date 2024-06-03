@@ -24,9 +24,16 @@ func TestCreateAccessToken_Succeeds(t *testing.T) {
 
 	expectedExpiry := time.Date(1980, 01, 01, 0, 0, 0, 0, time.UTC)
 	actualInstallation := "unknown"
+	var actualPermissions map[string]string
 
 	router.HandleFunc("/app/installations/{installationID}/access_tokens", func(w http.ResponseWriter, r *http.Request) {
 		actualInstallation = r.PathValue("installationID")
+
+		var reqBody struct {
+			Permissions map[string]string `json:"permissions"`
+		}
+		json.NewDecoder(r.Body).Decode(&reqBody)
+		actualPermissions = reqBody.Permissions
 
 		JSON(w, &api.InstallationToken{
 			Token:     api.String("expected-token"),
@@ -48,12 +55,19 @@ func TestCreateAccessToken_Succeeds(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	token, expiry, err := gh.CreateAccessToken(context.Background(), "https://github.com/organization/repository")
+	permissions := github.Permissions{
+		Contents:     "read",
+		PullRequests: "read",
+	}
+
+	token, expiry, err := gh.CreateAccessToken(context.Background(), "https://github.com/organization/repository", permissions)
 
 	require.NoError(t, err)
 	assert.Equal(t, "expected-token", token)
 	assert.Equal(t, expectedExpiry, expiry)
 	assert.Equal(t, "20", actualInstallation)
+	assert.Equal(t, "read", actualPermissions["contents"])
+	assert.Equal(t, "read", actualPermissions["pull_requests"])
 }
 
 func TestCreateAccessToken_Fails_On_Invalid_URL(t *testing.T) {
@@ -77,7 +91,12 @@ func TestCreateAccessToken_Fails_On_Invalid_URL(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, _, err = gh.CreateAccessToken(context.Background(), "sch_eme://invalid_url/")
+	permissions := github.Permissions{
+		Contents:     "read",
+		PullRequests: "read",
+	}
+
+	_, _, err = gh.CreateAccessToken(context.Background(), "sch_eme://invalid_url/", permissions)
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "first path segment in URL")
@@ -104,7 +123,12 @@ func TestCreateAccessToken_Fails_On_Failed_Request(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, _, err = gh.CreateAccessToken(context.Background(), "https://dodgey")
+	permissions := github.Permissions{
+		Contents:     "read",
+		PullRequests: "read",
+	}
+
+	_, _, err = gh.CreateAccessToken(context.Background(), "https://dodgey", permissions)
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, ": 418")
