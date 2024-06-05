@@ -1,109 +1,68 @@
 package github
 
 import (
-	"fmt"
-	"os"
+	"strings"
 
 	"github.com/google/go-github/v61/github"
+	"github.com/jamestelfer/chinmina-bridge/internal/config"
 )
 
 type Permissions struct {
-	Actions            string
-	Checks             string
-	Contents           string
-	Deployments        string
-	Issues             string
-	Metadata           string
-	Packages           string
-	Pages              string
-	PullRequests       string
-	RepositoryProjects string
-	SecurityEvents     string
-	Statuses           string
+	Permissions []string
 }
 
 func (p Permissions) ToGithubPermissions() *github.InstallationPermissions {
 	permissions := &github.InstallationPermissions{}
+	permMap := map[string]**string{
+		"actions:read":              &permissions.Actions,
+		"actions:write":             &permissions.Actions,
+		"checks:read":               &permissions.Checks,
+		"checks:write":              &permissions.Checks,
+		"contents:read":             &permissions.Contents,
+		"contents:write":            &permissions.Contents,
+		"deployments:read":          &permissions.Deployments,
+		"deployments:write":         &permissions.Deployments,
+		"issues:read":               &permissions.Issues,
+		"issues:write":              &permissions.Issues,
+		"metadata:read":             &permissions.Metadata,
+		"metadata:write":            &permissions.Metadata,
+		"packages:read":             &permissions.Packages,
+		"packages:write":            &permissions.Packages,
+		"pages:read":                &permissions.Pages,
+		"pages:write":               &permissions.Pages,
+		"pull_requests:read":        &permissions.PullRequests,
+		"pull_requests:write":       &permissions.PullRequests,
+		"repository_projects:read":  &permissions.RepositoryProjects,
+		"repository_projects:write": &permissions.RepositoryProjects,
+		"security_events:read":      &permissions.SecurityEvents,
+		"security_events:write":     &permissions.SecurityEvents,
+		"statuses:read":             &permissions.Statuses,
+		"statuses:write":            &permissions.Statuses,
+	}
 
-	setPermission(&permissions.Actions, p.Actions)
-	setPermission(&permissions.Checks, p.Checks)
-	setPermission(&permissions.Contents, p.Contents)
-	setPermission(&permissions.Deployments, p.Deployments)
-	setPermission(&permissions.Issues, p.Issues)
-	setPermission(&permissions.Metadata, p.Metadata)
-	setPermission(&permissions.Packages, p.Packages)
-	setPermission(&permissions.Pages, p.Pages)
-	setPermission(&permissions.PullRequests, p.PullRequests)
-	setPermission(&permissions.RepositoryProjects, p.RepositoryProjects)
-	setPermission(&permissions.SecurityEvents, p.SecurityEvents)
-	setPermission(&permissions.Statuses, p.Statuses)
+	for _, perm := range p.Permissions {
+		if field, ok := permMap[perm]; ok {
+			setPermission(field, perm)
+		}
+	}
 
 	return permissions
 }
 
-// GetPermissionsFromEnv retrieves GitHub token permissions from Buildkite
-// environment variables. It reads the permissions for various GitHub features
-// from environment variables that should be set to either "read" or "write". If
-// an environment variable is not set, the permission is omitted.
-func GetPermissionsFromEnv() (Permissions, error) {
-	permissions := Permissions{}
-
-	envVars := map[string]*string{
-		"GITHUB_PERMISSIONS_ACTIONS":             &permissions.Actions,
-		"GITHUB_PERMISSIONS_CHECKS":              &permissions.Checks,
-		"GITHUB_PERMISSIONS_CONTENTS":            &permissions.Contents,
-		"GITHUB_PERMISSIONS_DEPLOYMENTS":         &permissions.Deployments,
-		"GITHUB_PERMISSIONS_ISSUES":              &permissions.Issues,
-		"GITHUB_PERMISSIONS_METADATA":            &permissions.Metadata,
-		"GITHUB_PERMISSIONS_PACKAGES":            &permissions.Packages,
-		"GITHUB_PERMISSIONS_PAGES":               &permissions.Pages,
-		"GITHUB_PERMISSIONS_PULL_REQUESTS":       &permissions.PullRequests,
-		"GITHUB_PERMISSIONS_REPOSITORY_PROJECTS": &permissions.RepositoryProjects,
-		"GITHUB_PERMISSIONS_SECURITY_EVENTS":     &permissions.SecurityEvents,
-		"GITHUB_PERMISSIONS_STATUSES":            &permissions.Statuses,
+func GetPermissionsFromConfig(config *config.Configuration, repoName string) (Permissions, error) {
+	configPerms, err := config.GetPermissionsFromConfig(config, repoName)
+	if err != nil {
+		return Permissions{}, err
 	}
 
-	defaultValues := map[string]string{
-		"GITHUB_PERMISSIONS_CONTENTS": "read",
-	}
-
-	for envVar, field := range envVars {
-		defaultValue := defaultValues[envVar]
-		value := getEnv(envVar, defaultValue)
-		err := validatePermission(value, envVar)
-		if err != nil {
-			return permissions, err
-		}
-		*field = value
-	}
-
-	return permissions, nil
+	return Permissions{
+		Permissions: configPerms,
+	}, nil
 }
 
 func setPermission(field **string, value string) {
-	if value != "" {
-		*field = github.String(value)
+	parts := strings.Split(value, ":")
+	if len(parts) == 2 {
+		*field = github.String(parts[1])
 	}
-}
-
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
-var validPermissions = map[string]struct{}{
-	"read":  {},
-	"write": {},
-}
-
-func validatePermission(permission, envVar string) error {
-	if permission == "" {
-		return nil
-	}
-	if _, valid := validPermissions[permission]; !valid {
-		return fmt.Errorf("invalid value for %s: %s", envVar, permission)
-	}
-	return nil
 }

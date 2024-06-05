@@ -15,12 +15,16 @@ import (
 )
 
 type Client struct {
-	client         *github.Client
-	installationID int64
+	client             *github.Client
+	installationID     int64
+	permissionsService PermissionsService
 }
 
-func New(cfg config.GithubConfig) (Client, error) {
+type PermissionsService interface {
+	GetPermissions(ctx context.Context, pipelineName string) (Permissions, error)
+}
 
+func New(cfg config.GithubConfig, ps PermissionsService) (Client, error) {
 	// Create a transport using the JWT authentication method. The endpoints
 	// we're calling require this method.
 	appInstallationTransport, err := ghinstallation.NewAppsTransport(
@@ -53,8 +57,9 @@ func New(cfg config.GithubConfig) (Client, error) {
 	}
 
 	return Client{
-		client,
-		cfg.InstallationID,
+		client:             client,
+		installationID:     cfg.InstallationID,
+		permissionsService: ps,
 	}, nil
 }
 

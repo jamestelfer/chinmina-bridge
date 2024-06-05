@@ -1,0 +1,16 @@
+default:
+  permissions: # empty list, no permissions granted
+    - "content:read"
+  repositories:
+    - name: "org/privaterepo" # optional list of repositories to give access by default
+      permissions: ["content:read"] # optional, defaults to permissions above
+    - name: "org/otherrepo"
+
+pipelines:
+  - name: "pipeline name"
+    repositories:
+      # potentially implicit here is content:read for the repo of the pipeline
+      - name: "org/repo1" # overlap here with defaults results in a union of the available properties
+        permissions: ["content:read", "pull-request:write"]
+      - name: "org/repo2"
+        permissions: ["content:read", "pull-request:write"]
