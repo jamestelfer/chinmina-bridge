@@ -55,7 +55,16 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 		return nil, fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
 
-	tokenVendor := vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken))
+	permissions, err := github.GetPermissionsFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("getting permissions from environment variables failed: %v\n", err)
+	}
+
+	createAccessToken := func(ctx context.Context, repoURL string) (string, time.Time, error) {
+		return gh.CreateAccessToken(ctx, repoURL, permissions)
+	}
+
+	tokenVendor := vendorCache(vendor.New(bk.RepositoryLookup, createAccessToken))
 
 	mux.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
 	mux.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
