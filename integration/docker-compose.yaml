@@ -34,6 +34,7 @@ services:
       - BUILDKITE_API_TOKEN
       - JWT_BUILDKITE_ORGANIZATION_SLUG
       - JWT_AUDIENCE=github-app-auth:jamestelfer
+      - GITHUB_APP_PRIVATE_KEY_ARN
       - GITHUB_APP_PRIVATE_KEY
       - GITHUB_APP_ID
       - GITHUB_APP_INSTALLATION_ID
@@ -43,6 +44,12 @@ services:
       - OBSERVE_METRICS_ENABLED=false
       - OBSERVE_TYPE=grpc
       - OBSERVE_OTEL_LOG_LEVEL=debug
+      # pass through AWS credentials (allows for KMS signing to be used)
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_REGION
+      - AWS_DEFAULT_REGION
     volumes:
       - "..:/src"
 

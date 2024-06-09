@@ -22,7 +22,7 @@ import (
 	"github.com/justinas/alice"
 )
 
-func configureServerRoutes(cfg config.Config) (http.Handler, error) {
+func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler, error) {
 	// wrap a mux such that HTTP telemetry is configured by default
 	muxWithoutTelemetry := http.NewServeMux()
 	mux := observe.NewMux(muxWithoutTelemetry)
@@ -45,7 +45,7 @@ func configureServerRoutes(cfg config.Config) (http.Handler, error) {
 		return nil, fmt.Errorf("buildkite configuration failed: %w", err)
 	}
 
-	gh, err := github.New(cfg.Github)
+	gh, err := github.New(ctx, cfg.Github)
 	if err != nil {
 		return nil, fmt.Errorf("github configuration failed: %w", err)
 	}
@@ -100,7 +100,7 @@ func launchServer() error {
 	}
 
 	// setup routing and dependencies
-	handler, err := configureServerRoutes(cfg)
+	handler, err := configureServerRoutes(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("server routing configuration failed: %w", err)
 	}

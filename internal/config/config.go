@@ -35,10 +35,13 @@ type BuildkiteConfig struct {
 }
 
 type GithubConfig struct {
-	ApiURL         string // internal only
-	PrivateKey     string `env:"GITHUB_APP_PRIVATE_KEY, required"`
-	ApplicationID  int64  `env:"GITHUB_APP_ID, required"`
-	InstallationID int64  `env:"GITHUB_APP_INSTALLATION_ID, required"`
+	ApiURL string // internal only
+
+	PrivateKey    string `env:"GITHUB_APP_PRIVATE_KEY"`
+	PrivateKeyARN string `env:"GITHUB_APP_PRIVATE_KEY_ARN"`
+
+	ApplicationID  int64 `env:"GITHUB_APP_ID, required"`
+	InstallationID int64 `env:"GITHUB_APP_INSTALLATION_ID, required"`
 }
 
 type ObserveConfig struct {
