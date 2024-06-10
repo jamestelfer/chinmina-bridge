@@ -19,6 +19,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNew_FailsWithInvalidConfig(t *testing.T) {
+	_, err := github.New(
+		context.Background(),
+		config.GithubConfig{
+			// at least one of these is required
+			PrivateKey:    "",
+			PrivateKeyARN: "",
+		},
+	)
+	assert.ErrorContains(t, err, "no private key configuration specified")
+}
+
+func TestNew_SucceedsWithKMSConfig(t *testing.T) {
+	// set a purposefully invalid endpoint to prevent any errant remote calls
+	t.Setenv("AWS_ENDPOINT_URL", "http://localhost:20987/not-bound")
+
+	_, err := github.New(
+		context.Background(),
+		config.GithubConfig{
+			PrivateKeyARN: "arn://foo",
+		},
+	)
+	assert.NoError(t, err)
+}
+
 func TestCreateAccessToken_Succeeds(t *testing.T) {
 	router := http.NewServeMux()
 
@@ -40,12 +65,15 @@ func TestCreateAccessToken_Succeeds(t *testing.T) {
 	// generate valid key for testing
 	key := generateKey(t)
 
-	gh, err := github.New(config.GithubConfig{
-		ApiURL:         svr.URL,
-		PrivateKey:     key,
-		ApplicationID:  10,
-		InstallationID: 20,
-	})
+	gh, err := github.New(
+		context.Background(),
+		config.GithubConfig{
+			ApiURL:         svr.URL,
+			PrivateKey:     key,
+			ApplicationID:  10,
+			InstallationID: 20,
+		},
+	)
 	require.NoError(t, err)
 
 	token, expiry, err := gh.CreateAccessToken(context.Background(), "https://github.com/organization/repository")
@@ -69,12 +97,15 @@ func TestCreateAccessToken_Fails_On_Invalid_URL(t *testing.T) {
 	// generate valid key for testing
 	key := generateKey(t)
 
-	gh, err := github.New(config.GithubConfig{
-		ApiURL:         svr.URL,
-		PrivateKey:     key,
-		ApplicationID:  10,
-		InstallationID: 20,
-	})
+	gh, err := github.New(
+		context.Background(),
+		config.GithubConfig{
+			ApiURL:         svr.URL,
+			PrivateKey:     key,
+			ApplicationID:  10,
+			InstallationID: 20,
+		},
+	)
 	require.NoError(t, err)
 
 	_, _, err = gh.CreateAccessToken(context.Background(), "sch_eme://invalid_url/")
@@ -96,12 +127,15 @@ func TestCreateAccessToken_Fails_On_Failed_Request(t *testing.T) {
 	// generate valid key for testing
 	key := generateKey(t)
 
-	gh, err := github.New(config.GithubConfig{
-		ApiURL:         svr.URL,
-		PrivateKey:     key,
-		ApplicationID:  10,
-		InstallationID: 20,
-	})
+	gh, err := github.New(
+		context.Background(),
+		config.GithubConfig{
+			ApiURL:         svr.URL,
+			PrivateKey:     key,
+			ApplicationID:  10,
+			InstallationID: 20,
+		},
+	)
 	require.NoError(t, err)
 
 	_, _, err = gh.CreateAccessToken(context.Background(), "https://dodgey")

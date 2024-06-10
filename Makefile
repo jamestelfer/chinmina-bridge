@@ -33,7 +33,7 @@ run: build
 
 .PHONY: docker
 docker: build
-	docker compose -f integration/docker-compose.yaml up
+	docker compose -f integration/docker-compose.yaml up --abort-on-container-exit
 
 .PHONY: docker-down
 docker-down:

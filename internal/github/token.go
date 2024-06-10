@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-github/v61/github"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/rs/zerolog/log"
@@ -19,17 +21,21 @@ type Client struct {
 	installationID int64
 }
 
-func New(cfg config.GithubConfig) (Client, error) {
+func New(ctx context.Context, cfg config.GithubConfig) (Client, error) {
+	signer, err := createSigner(ctx, cfg)
+	if err != nil {
+		return Client{}, fmt.Errorf("could not create signer for GitHub transport: %w", err)
+	}
 
-	// Create a transport using the JWT authentication method. The endpoints
-	// we're calling require this method.
-	appInstallationTransport, err := ghinstallation.NewAppsTransport(
+	// We're calling "installation_token", which is JWT authenticated, so we use
+	// the AppsTransport.
+	appInstallationTransport, err := ghinstallation.NewAppsTransportWithOptions(
 		http.DefaultTransport,
 		cfg.ApplicationID,
-		[]byte(cfg.PrivateKey),
+		ghinstallation.WithSigner(signer),
 	)
 	if err != nil {
-		return Client{}, fmt.Errorf("could not create github transport: %w", err)
+		return Client{}, fmt.Errorf("could not create GitHub transport: %w", err)
 	}
 
 	// Create a client for use with the application credentials. This client
@@ -64,9 +70,6 @@ func (c Client) CreateAccessToken(ctx context.Context, repositoryURL string) (st
 		return "", time.Time{}, err
 	}
 
-	// qualifiedIdentifier, _ := strings.CutSuffix(u.Path, ".git")
-	// _, repoName, _ := strings.Cut(qualifiedIdentifier[1:], "/")
-
 	_, repoName := RepoForURL(*u)
 
 	tok, r, err := c.client.Apps.CreateInstallationToken(ctx, c.installationID,
@@ -84,6 +87,23 @@ func (c Client) CreateAccessToken(ctx context.Context, repositoryURL string) (st
 	log.Info().Int("limit", r.Rate.Limit).Int("remaining", r.Rate.Remaining).Msg("github token API rate")
 
 	return tok.GetToken(), tok.GetExpiresAt().Time, nil
+}
+
+func createSigner(ctx context.Context, cfg config.GithubConfig) (ghinstallation.Signer, error) {
+	if cfg.PrivateKeyARN != "" {
+		return NewAWSKMSSigner(ctx, cfg.PrivateKeyARN)
+	}
+
+	if cfg.PrivateKey != "" {
+		key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(cfg.PrivateKey))
+		if err != nil {
+			return nil, fmt.Errorf("could not parse private key: %s", err)
+		}
+
+		return ghinstallation.NewRSASigner(jwt.SigningMethodRS256, key), nil
+	}
+
+	return nil, errors.New("no private key configuration specified")
 }
 
 func RepoForURL(u url.URL) (string, string) {
