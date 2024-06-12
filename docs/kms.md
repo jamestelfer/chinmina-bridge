@@ -24,10 +24,10 @@ It is more secure (though more complicated) to provide Chinmina with an AWS KMS 
 4. Create an alias for the KMS key to allow for easy [manual key
    rotation][aws-manual-key-rotation].
 
-   > [!IMPORTANT]
-   > A key alias is essential to allow for key rotation. Unless you're stopped
-   > by environmental policy, use the alias. The key will be able to be rotated
-   > without any service downtime.
+> [!IMPORTANT]
+> A key alias is essential to allow for key rotation. Unless you're stopped
+> by environmental policy, use the alias. The key will be able to be rotated
+> without any service downtime.
 
 5. Ensure that the key policy has a statement allowing Chinmina to access the key. The specified role should be the role that the Chinmina process has access to at runtime.
 
@@ -47,19 +47,37 @@ It is more secure (though more complicated) to provide Chinmina with an AWS KMS 
     }
     ```
 
-    > [!IMPORTANT]
-    > Chinmina does not assume a role to access the key. It assumes valid
-    > credentials are present for the AWS SDK to use.
+> [!INFO]
+> Chinmina does not assume a role to access the key. It assumes valid
+> credentials are present for the AWS SDK to use.
 
 ## Configuring the Chinmina service
 
 1. Set the environment variable `GITHUB_APP_PRIVATE_KEY_ARN` to the ARN of the **alias** that has just been created.
 
-2. Update IAM for your key.
-    1. Key resource policy
-    2. Alias policy?
-    3. IAM policy for Chinmina process (i.e. the AWS role available to Chinmina
-       when it runs)
+2. Update IAM for your key
+    1. The KMS key resource policy needs to allow the service to use the key
+       _for signing only_.
+    2. The IAM policy for the Chinmina process (i.e. the AWS role available to
+       Chinmina when it runs) needs to be able to use the _alias_ created for
+       the private key. This is done with a condition in the policy element:
+
+       ```json
+        {
+            "Action": "kms:Sign",
+            "Effect": "Allow",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "kms:RequestAlias": "alias/chinmina-signing",
+                },
+            },
+        }
+        ```
+
+        Using the `kms:RequestAlias` condition instead of the fully qualified
+        key ARN in the `resource` attribute allows for transparent key rotation
+        without service interruption.
 
 [github-key-generate]: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/managing-private-keys-for-github-apps#generating-private-keys
 [aws-import-key-material]: https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html
