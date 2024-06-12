@@ -47,7 +47,7 @@ It is more secure (though more complicated) to provide Chinmina with an AWS KMS 
     }
     ```
 
-> [!INFO]
+> [!TIP]
 > Chinmina does not assume a role to access the key. It assumes valid
 > credentials are present for the AWS SDK to use.
 
