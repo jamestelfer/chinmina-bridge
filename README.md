@@ -1,4 +1,5 @@
 # Chinmina Bridge: Buildkite/Github OIDC token bridge
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjamestelfer%2Fchinmina-bridge.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjamestelfer%2Fchinmina-bridge?ref=badge_shield)
 
 
@@ -243,7 +244,6 @@ Contributions are welcome.
 - Execute `git` commands in the `.development/keys` directory. This has git
   configuration set up so it uses a local credential helper that will use the
   keys in the `.development/keys` directory.
-
 
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjamestelfer%2Fchinmina-bridge.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjamestelfer%2Fchinmina-bridge?ref=badge_large)
