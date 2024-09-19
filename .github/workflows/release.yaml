@@ -12,7 +12,7 @@ permissions:
 jobs:
   goreleaser:
     # deploy with the correct environment to allow DockerHub access
-    environment: Publish
+    environment: "Publish"
 
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +37,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
-          version: v1.25.1
+          version: v2.3.2
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
