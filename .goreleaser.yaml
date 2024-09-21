@@ -23,12 +23,13 @@ builds:
 # If you do this locally, sign with an OAuth identity you don't mind being permanently
 # published to a transparency log.
 binary_signs:
-  - cmd: './ci-only.sh'
+  - signature: '${artifact}.cosign.bundle'
+    cmd: './ci-only.sh'
     args:
       - "cosign"
       - "sign-blob"
       - "${artifact}"
-      - "--bundle=${artifact}.cosign.bundle"
+      - "--bundle=${signature}"
       - "--yes" # needed on cosign 2.0.0+
     output: false # the necessary output is the .cosign.bundle file
 
