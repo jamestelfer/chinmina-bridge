@@ -1,6 +1,12 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
+env:
+    - 'CI={{ (envOrDefault "CI" "false") }}'
+    - 'CHANGELOG_DISABLE={{ eq (envOrDefault "CI" "false") "false" }}'
+    - 'RELEASE_DISABLE={{ eq (envOrDefault "CI" "false") "false" }}'
+    - 'KO_DOCKER_REPO={{ envOrDefault "KO_DOCKER_REPO" (printf "ttl.sh/chinmina-prerelease/%d" .Now.Unix) }}'
+
 builds:
   - id: release
     binary: chinmina-bridge
@@ -21,10 +27,13 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 changelog:
+  disable: "{{ .Env.CHANGELOG_DISABLE }}"
   use: github-native
   sort: asc
 
 release:
+  disable: "{{ .Env.RELEASE_DISABLE }}"
+
   prerelease: auto
   header: |
     Distributions for this release are published as binaries and a Docker image.
@@ -46,20 +55,14 @@ kos:
     working_dir: .
     base_image: cgr.dev/chainguard/static
 
-    repository: chinmina
+    # repository is set using environment variables in the top-level env section
+    # (see above).
 
-    # Platforms to build and publish.
-    #
-    # Default: 'linux/amd64'
     platforms:
       - linux/amd64
       - linux/arm64
 
     # Tag to build and push.
-    # Empty tags are ignored.
-    #
-    # Default: 'latest'
-    # Templates: allowed
     tags:
       - "{{if not .Prerelease}}latest{{end}}"
       - "{{.Tag}}"
