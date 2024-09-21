@@ -47,7 +47,7 @@ jobs:
         with:
           distribution: goreleaser
           version: v2.3.2
-          args: release --clean
+          args: release --clean --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KO_DOCKER_REPO: "chinmina" # the DockerHub chinmina repository
