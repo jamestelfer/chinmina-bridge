@@ -7,5 +7,11 @@ if [ "${CI:-false}" != "true" ]; then
   exit 0
 fi
 
+echo "==> Signing environment:"
+
+env | grep --invert-match '_TOKEN'
+
+echo "==> Executing signing process:"
+echo "  --> $*"
 # execute the parameters as the script
 exec "$@"
