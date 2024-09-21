@@ -1,6 +1,12 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
+env:
+    - 'CI={{ (envOrDefault "CI" "false") }}'
+    - 'CHANGELOG_DISABLE={{ eq (envOrDefault "CI" "false") "false" }}'
+    - 'RELEASE_DISABLE={{ eq (envOrDefault "CI" "false") "false" }}'
+    - 'KO_DOCKER_REPO={{ envOrDefault "KO_DOCKER_REPO" (printf "ttl.sh/chinmina-prerelease/%d" .Now.Unix) }}'
+
 builds:
   - id: release
     binary: chinmina-bridge
@@ -13,18 +19,39 @@ builds:
       - amd64
       - arm64
 
+# Sign with cosign -- this picks up the OIDC token from the environment in GHA.
+# If you do this locally, sign with an OAuth identity you don't mind being permanently
+# published to a transparency log.
+binary_signs:
+  - cmd: './ci-only.sh'
+    args:
+      - "cosign"
+      - "sign-blob"
+      - "${artifact}"
+      - "--bundle=${artifact}.cosign.bundle"
+      - "--yes" # needed on cosign 2.0.0+
+    output: false # the necessary output is the .cosign.bundle file
+
 checksum:
   name_template: "checksums.txt"
 
 archives:
   - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      # cosign produces a bundle file to allow for verification of the artifacts
+      # this is included in the archive to allow for easier verification after download
+      - src: '{{ .ArtifactPath }}.cosign.bundle'
+        strip_parent: true
 
 changelog:
+  disable: "{{ .Env.CHANGELOG_DISABLE }}"
   use: github-native
   sort: asc
 
 release:
+  disable: "{{ .Env.RELEASE_DISABLE }}"
+
   prerelease: auto
   header: |
     Distributions for this release are published as binaries and a Docker image.
@@ -40,26 +67,19 @@ release:
     If needed, binaries of this build (including Mac) can be found below.
 
 kos:
-  -
-    id: chinmina-bridge
+  - id: chinmina-bridge
     build: release
     working_dir: .
     base_image: cgr.dev/chainguard/static
 
-    repository: chinmina
+    # repository is set using environment variables in the top-level env section
+    # (see above).
 
-    # Platforms to build and publish.
-    #
-    # Default: 'linux/amd64'
     platforms:
       - linux/amd64
       - linux/arm64
 
     # Tag to build and push.
-    # Empty tags are ignored.
-    #
-    # Default: 'latest'
-    # Templates: allowed
     tags:
       - "{{if not .Prerelease}}latest{{end}}"
       - "{{.Tag}}"
@@ -74,3 +94,26 @@ kos:
 
     # Whether to use the base path without the MD5 hash after the repository name.
     base_import_paths: true
+
+# Sign with cosign -- this picks up the OIDC token from the environment in GHA.
+# If you do this locally, sign with an OAuth identity you don't mind being permanently
+# published to a transparency log.
+docker_signs:
+  - id: ko-signing
+
+    cmd: './ci-only.sh'
+    args:
+      - "cosign"
+      - "sign"
+      - "${artifact}"
+      - "--yes"
+
+    artifacts: all
+
+    ids:
+      # id of ko image above
+      - chinmina-bridge
+
+    # output is not necessary, as the signing is done in place, but it helps to
+    # provide the index in the transparency log.
+    output: true
