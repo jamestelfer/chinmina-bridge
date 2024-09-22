@@ -219,21 +219,6 @@ variables, and can be deployed to a server or as a container.
 - `GITHUB_APP_INSTALLATION_ID` (**required**): The installation ID of the
   created Github application into your organization.
 
-## Required functionality
-
-- refinement: can this stay in KMS perhaps?
-- stdout audit log:
-  - JSON: repo, permissions, generated_at, issued_at, pipeline_slug,build_id, step_id
-
-- going to want to have metrics
-  - token cache hit rate (by repo?)
-  - token generation time?
-
-- traces:
-  - requesting pipeline,build,step
-  - cached?
-  - request status
-
 ## Contributing
 
 Contributions are welcome.
@@ -246,4 +231,5 @@ Contributions are welcome.
   keys in the `.development/keys` directory.
 
 ## License
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjamestelfer%2Fchinmina-bridge.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjamestelfer%2Fchinmina-bridge?ref=badge_large)

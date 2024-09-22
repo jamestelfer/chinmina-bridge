@@ -61,15 +61,16 @@ release:
   header: |
     Distributions for this release are published as binaries and a Docker image.
 
-    The preferred way to consume a release is via its [Docker image](https://hub.docker.com/r/chinmina/chinmina-bridge):
+    The preferred way to consume a release is via its [Docker image](https://hub.docker.com/r/chinmina/chinmina-bridge). This image is multi-platform, supporting both Linux x86-64 and Linux ARM-64.
 
     ```text
     chinmina/chinmina-bridge:{{ .Tag }}
     ```
 
-    The multi-platform image is published for Linux x86-64 and Linux ARM-64.
+    If needed, binaries of this build can be found below.
 
-    If needed, binaries of this build (including Mac) can be found below.
+    > [!IMPORTANT]
+    > Releases can be verified with Sigstore's `cosign`: see the [release verification documentation](./docs/verifying-releases.md) in this repo for details.
 
 kos:
   - id: chinmina-bridge
