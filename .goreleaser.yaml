@@ -23,7 +23,7 @@ builds:
 # published to a transparency log.
 binary_signs:
   - id: cosign
-    signature: '${artifact}_{{ .Os }}_{{ .Arch }}.cosign.bundle'
+    signature: '${artifact}.cosign.bundle'
     cmd: './ci-only.sh'
     args:
       - "cosign"
