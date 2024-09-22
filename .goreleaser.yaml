@@ -22,7 +22,8 @@ builds:
 # If you do this locally, sign with an OAuth identity you don't mind being permanently
 # published to a transparency log.
 binary_signs:
-  - signature: '${artifact}_{{ .Os }}_{{ .Arch }}.cosign.bundle'
+  - id: cosign
+    signature: '${artifact}.cosign.bundle'
     cmd: './ci-only.sh'
     args:
       - "cosign"
@@ -36,12 +37,13 @@ checksum:
   name_template: "checksums.txt"
 
 archives:
-  - format: tar.gz
+  - id: archives
+    format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     files:
       # cosign produces a bundle file to allow for verification of the artifacts
       # this is included in the archive to allow for easier verification after download
-      - src: '{{ .ArtifactPath }}_{{ .Os }}_{{ .Arch }}.cosign.bundle'
+      - src: '{{ .ArtifactPath }}.cosign.bundle'
         strip_parent: true
 
 changelog:
@@ -51,6 +53,9 @@ changelog:
 
 release:
   disable: "{{ .Env.RELEASE_DISABLE }}"
+
+  ids:
+    - archives
 
   prerelease: auto
   header: |
