@@ -49,7 +49,7 @@ func Middleware(cfg config.AuthorizationConfig, options ...jwtmiddleware.Option)
 		return nil, fmt.Errorf("failed to set up the validator: %v", err)
 	}
 
-	// wrap the standard validator with additional validaton that ensures the
+	// wrap the standard validator with additional validation that ensures the
 	// core claims (including validity periods) are present
 	tokenValidator := registeredClaimsValidator(jwtValidator.ValidateToken)
 
