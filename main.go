@@ -42,6 +42,7 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 	requestLimiter := maxRequestSize(requestLimitBytes)
 
 	authorizedRouteMiddleware := alice.New(requestLimiter, auditor, authorizer)
+	standardRouteMiddleware := alice.New(requestLimiter)
 
 	// setup token handler and dependencies
 	bk, err := buildkite.New(cfg.Buildkite)
@@ -64,8 +65,8 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 	mux.Handle("POST /token", authorizedRouteMiddleware.Then(handlePostToken(tokenVendor)))
 	mux.Handle("POST /git-credentials", authorizedRouteMiddleware.Then(handlePostGitCredentials(tokenVendor)))
 
-	// healthchecks are not included in telemetry
-	muxWithoutTelemetry.Handle("GET /healthcheck", handleHealthCheck())
+	// healthchecks are not included in telemetry or authorization
+	muxWithoutTelemetry.Handle("GET /healthcheck", standardRouteMiddleware.Then(handleHealthCheck()))
 
 	return mux, nil
 }
