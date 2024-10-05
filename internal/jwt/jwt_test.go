@@ -14,6 +14,7 @@ import (
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
+	"github.com/jamestelfer/chinmina-bridge/internal/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -118,6 +119,8 @@ func TestMiddleware(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			testhelpers.SetupLogger(t)
+
 			request, err := http.NewRequest(http.MethodGet, "", nil)
 			require.NoError(t, err)
 

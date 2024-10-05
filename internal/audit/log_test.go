@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jamestelfer/chinmina-bridge/internal/audit"
+	"github.com/jamestelfer/chinmina-bridge/internal/testhelpers"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,8 @@ import (
 func TestMiddleware(t *testing.T) {
 
 	t.Run("captures request info and configures context", func(t *testing.T) {
+		testhelpers.SetupLogger(t)
+
 		testAgent := "kettle/1.0"
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -36,6 +39,8 @@ func TestMiddleware(t *testing.T) {
 	})
 
 	t.Run("captures status code", func(t *testing.T) {
+		testhelpers.SetupLogger(t)
+
 		var capturedContext context.Context
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			capturedContext = r.Context()
@@ -55,6 +60,8 @@ func TestMiddleware(t *testing.T) {
 	})
 
 	t.Run("log written", func(t *testing.T) {
+		testhelpers.SetupLogger(t)
+
 		auditWritten := false
 
 		ctx := withLogHook(
@@ -80,6 +87,8 @@ func TestMiddleware(t *testing.T) {
 	})
 
 	t.Run("log written on panic", func(t *testing.T) {
+		testhelpers.SetupLogger(t)
+
 		auditWritten := false
 
 		ctx := withLogHook(
@@ -114,6 +123,8 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestAuditing(t *testing.T) {
+	testhelpers.SetupLogger(t)
+
 	ctx := context.Background()
 	r, _ := requestSetup()
 
