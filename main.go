@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/jamestelfer/chinmina-bridge/internal/audit"
 	"github.com/jamestelfer/chinmina-bridge/internal/buildkite"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
@@ -31,7 +30,7 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 	// configure middleware
 	auditor := audit.Middleware()
 
-	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
+	authorizer, err := jwt.Middleware(cfg.Authorization)
 	if err != nil {
 		return nil, fmt.Errorf("authorizer configuration failed: %w", err)
 	}

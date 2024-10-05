@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -11,8 +12,10 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/justinas/alice"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
+	"github.com/jamestelfer/chinmina-bridge/internal/audit"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/jamestelfer/chinmina-bridge/internal/testhelpers"
 	"github.com/stretchr/testify/assert"
@@ -94,18 +97,6 @@ func TestMiddleware(t *testing.T) {
 			wantStatusCode: http.StatusUnauthorized,
 			wantBodyText:   "JWT is invalid",
 		},
-		{
-			name: "error handler",
-			claims: valid(jwt.Claims{
-				Audience: []string{"audience"},
-				Subject:  "subject",
-				Issuer:   "issuer",
-			}),
-			customClaims:   custom("that dog ain't gonna hunt", "test-pipeline"),
-			wantStatusCode: http.StatusUnauthorized,
-			wantBodyText:   "JWT is invalid",
-			options:        []jwtmiddleware.Option{jwtmiddleware.WithErrorHandler(LogErrorHandler())},
-		},
 	}
 
 	jwk := generateJWK(t)
@@ -121,8 +112,12 @@ func TestMiddleware(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			testhelpers.SetupLogger(t)
 
+			ctx, _ := audit.Context(context.Background())
+
 			request, err := http.NewRequest(http.MethodGet, "", nil)
 			require.NoError(t, err)
+
+			request = request.WithContext(ctx)
 
 			audience := "an-actor-demands-an"
 			if len(test.claims.Audience) > 0 {
@@ -139,32 +134,35 @@ func TestMiddleware(t *testing.T) {
 
 			responseRecorder := httptest.NewRecorder()
 
-			options := []jwtmiddleware.Option{
-				jwtmiddleware.WithErrorHandler(errorHandler(t)),
-			}
-
-			if len(test.options) > 0 {
-				options = append(options, test.options...)
-			}
-
-			mw, err := Middleware(cfg, options...)
+			authMiddleware, err := Middleware(cfg, test.options...)
 			require.NoError(t, err)
 
-			handler := mw(successHandler)
+			testMiddleware := alice.New(audit.Middleware(), authMiddleware)
+
+			handler := testMiddleware.Then(successHandler)
 			handler.ServeHTTP(responseRecorder, request)
 
 			assert.Equal(t, test.wantStatusCode, responseRecorder.Code)
 			assert.Contains(t, responseRecorder.Body.String(), test.wantBodyText)
+
+			// once the request has been processed, the audit log should have the necessary details
+			auditEntry := audit.Log(ctx)
+			if test.wantStatusCode == http.StatusOK {
+				assert.True(t, auditEntry.Authorized)
+				assert.Empty(t, auditEntry.Error)
+				assert.NotEmpty(t, auditEntry.AuthIssuer)
+				assert.Equal(t, "subject", auditEntry.AuthSubject)
+				assert.ElementsMatch(t, []string{"audience"}, auditEntry.AuthAudience)
+				assert.NotZero(t, auditEntry.AuthExpirySecs)
+			} else {
+				assert.False(t, auditEntry.Authorized)
+				assert.NotEmpty(t, auditEntry.Error)
+				assert.Empty(t, auditEntry.AuthIssuer)
+				assert.Empty(t, auditEntry.AuthSubject)
+				assert.Empty(t, auditEntry.AuthAudience)
+				assert.Zero(t, auditEntry.AuthExpirySecs)
+			}
 		})
-	}
-}
-
-func errorHandler(t *testing.T) jwtmiddleware.ErrorHandler {
-	return func(w http.ResponseWriter, r *http.Request, err error) {
-		t.Helper()
-		t.Logf("error handler called: %s, %v", err.Error(), err)
-
-		jwtmiddleware.DefaultErrorHandler(w, r, err)
 	}
 }
 
@@ -240,7 +238,7 @@ func setupTestServer(t *testing.T, jwk *jose.JSONWebKey) (server *httptest.Serve
 }
 
 func createRequestJWT(t *testing.T, jwk *jose.JSONWebKey, issuer string, claims ...any) string {
-	// t.Helper()
+	t.Helper()
 
 	key := jose.SigningKey{
 		Algorithm: jose.SignatureAlgorithm(jwk.Algorithm),

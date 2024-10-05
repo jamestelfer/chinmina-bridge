@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -32,8 +33,11 @@ type Entry struct {
 	SourceIP         string
 	UserAgent        string
 	RequestedProfile string
-	Identity         string
 	Authorized       bool
+	AuthSubject      string
+	AuthIssuer       string
+	AuthAudience     []string
+	AuthExpirySecs   int64
 	Error            string
 	Repositories     []string
 	Permissions      []string
@@ -49,11 +53,29 @@ func (e *Entry) MarshalZerologObject(event *zerolog.Event) {
 		Str("sourceIP", e.SourceIP).
 		Str("userAgent", e.UserAgent).
 		Str("requestedProfile", e.RequestedProfile).
-		Str("identity", e.Identity).
 		Bool("authorized", e.Authorized).
-		Str("error", e.Error).
-		Strs("repositories", e.Repositories).
-		Strs("permissions", e.Permissions)
+		Str("authSubject", e.AuthSubject).
+		Str("authIssuer", e.AuthIssuer).
+		Str("error", e.Error)
+
+	now := time.Now()
+	if e.AuthExpirySecs > 0 {
+		exp := time.Unix(e.AuthExpirySecs, 0)
+		remaining := exp.Sub(now).Round(time.Millisecond)
+		event.Time("authExpiry", exp)
+		event.Dur("authExpiryRemaining", remaining)
+	}
+	if len(e.AuthAudience) > 0 {
+		event.Strs("authAudience", e.AuthAudience)
+	}
+
+	if len(e.Repositories) > 0 {
+		event.Strs("repositories", e.Repositories)
+	}
+
+	if len(e.Permissions) > 0 {
+		event.Strs("permissions", e.Permissions)
+	}
 }
 
 // Begin sets up the audit log entry for the current request with details from the request.
