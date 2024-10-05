@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 // Configure sets up OpenTelemetry according to the configuration. If it does
@@ -134,13 +134,7 @@ func newTraceProvider(ctx context.Context, cfg config.ObserveConfig, e exporters
 		return nil, err
 	}
 
-	r, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(cfg.ServiceName),
-		),
-	)
+	r, err := resourceWithServiceName(resource.Default(), cfg.ServiceName)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +146,16 @@ func newTraceProvider(ctx context.Context, cfg config.ObserveConfig, e exporters
 		trace.WithResource(r),
 	)
 	return traceProvider, nil
+}
+
+func resourceWithServiceName(base *resource.Resource, serviceName string) (*resource.Resource, error) {
+	return resource.Merge(
+		base,
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName(serviceName),
+		),
+	)
 }
 
 func newMeterProvider(ctx context.Context, cfg config.ObserveConfig, e exporters) (*metric.MeterProvider, error) {
