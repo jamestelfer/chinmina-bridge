@@ -59,7 +59,7 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 		return nil, fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
 
-	tokenVendor := vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken))
+	tokenVendor := vendor.Auditor(vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken)))
 
 	mux.Handle("POST /token", authorizedRouteMiddleware.Then(handlePostToken(tokenVendor)))
 	mux.Handle("POST /git-credentials", authorizedRouteMiddleware.Then(handlePostGitCredentials(tokenVendor)))

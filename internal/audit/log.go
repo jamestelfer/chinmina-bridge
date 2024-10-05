@@ -41,6 +41,7 @@ type Entry struct {
 	Error            string
 	Repositories     []string
 	Permissions      []string
+	ExpirySecs       int64
 }
 
 // MarshalZerologObject implements zerolog.LogObjectMarshaler. This avoids the
@@ -65,6 +66,14 @@ func (e *Entry) MarshalZerologObject(event *zerolog.Event) {
 		event.Time("authExpiry", exp)
 		event.Dur("authExpiryRemaining", remaining)
 	}
+
+	if e.ExpirySecs > 0 {
+		exp := time.Unix(e.ExpirySecs, 0)
+		remaining := exp.Sub(now).Round(time.Millisecond)
+		event.Time("expiry", exp)
+		event.Dur("expiryRemaining", remaining)
+	}
+
 	if len(e.AuthAudience) > 0 {
 		event.Strs("authAudience", e.AuthAudience)
 	}
