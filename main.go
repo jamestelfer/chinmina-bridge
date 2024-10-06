@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
+	"github.com/jamestelfer/chinmina-bridge/internal/audit"
 	"github.com/jamestelfer/chinmina-bridge/internal/buildkite"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 	"github.com/jamestelfer/chinmina-bridge/internal/github"
@@ -28,7 +28,9 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 	mux := observe.NewMux(muxWithoutTelemetry)
 
 	// configure middleware
-	authorizer, err := jwt.Middleware(cfg.Authorization, jwtmiddleware.WithErrorHandler(jwt.LogErrorHandler()))
+	auditor := audit.Middleware()
+
+	authorizer, err := jwt.Middleware(cfg.Authorization)
 	if err != nil {
 		return nil, fmt.Errorf("authorizer configuration failed: %w", err)
 	}
@@ -36,8 +38,10 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 	// The request body size is fairly limited to prevent accidental or
 	// deliberate abuse. Given the current API shape, this is not configurable.
 	requestLimitBytes := int64(20 << 10) // 20 KB
+	requestLimiter := maxRequestSize(requestLimitBytes)
 
-	authorized := alice.New(maxRequestSize(requestLimitBytes), authorizer)
+	authorizedRouteMiddleware := alice.New(requestLimiter, auditor, authorizer)
+	standardRouteMiddleware := alice.New(requestLimiter)
 
 	// setup token handler and dependencies
 	bk, err := buildkite.New(cfg.Buildkite)
@@ -55,13 +59,13 @@ func configureServerRoutes(ctx context.Context, cfg config.Config) (http.Handler
 		return nil, fmt.Errorf("vendor cache configuration failed: %w", err)
 	}
 
-	tokenVendor := vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken))
+	tokenVendor := vendor.Auditor(vendorCache(vendor.New(bk.RepositoryLookup, gh.CreateAccessToken)))
 
-	mux.Handle("POST /token", authorized.Then(handlePostToken(tokenVendor)))
-	mux.Handle("POST /git-credentials", authorized.Then(handlePostGitCredentials(tokenVendor)))
+	mux.Handle("POST /token", authorizedRouteMiddleware.Then(handlePostToken(tokenVendor)))
+	mux.Handle("POST /git-credentials", authorizedRouteMiddleware.Then(handlePostGitCredentials(tokenVendor)))
 
-	// healthchecks are not included in telemetry
-	muxWithoutTelemetry.Handle("GET /healthcheck", handleHealthCheck())
+	// healthchecks are not included in telemetry or authorization
+	muxWithoutTelemetry.Handle("GET /healthcheck", standardRouteMiddleware.Then(handleHealthCheck()))
 
 	return mux, nil
 }
@@ -140,6 +144,8 @@ func configureLogging() {
 			Output(zerolog.ConsoleWriter{Out: os.Stdout}).
 			Level(zerolog.DebugLevel)
 	}
+
+	zerolog.DefaultContextLogger = &log.Logger
 }
 
 func logBuildInfo() {

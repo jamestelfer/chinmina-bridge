@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
+	"github.com/justinas/alice"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
-	"github.com/rs/zerolog/log"
 
+	"github.com/jamestelfer/chinmina-bridge/internal/audit"
 	"github.com/jamestelfer/chinmina-bridge/internal/config"
 )
 
@@ -49,21 +50,23 @@ func Middleware(cfg config.AuthorizationConfig, options ...jwtmiddleware.Option)
 		return nil, fmt.Errorf("failed to set up the validator: %v", err)
 	}
 
-	// wrap the standard validator with additional validaton that ensures the
+	// Auditing of the validation process uses a combination of the error handler
+	// and the audit middleware. The first ensures that validation errors are marked in
+	// the audit log, while the second ensures that the claims are logged when the
+	// token is valid.
+
+	// force the use of the audit error handler
+	options = append(options, jwtmiddleware.WithErrorHandler(auditErrorHandler()))
+
+	// wrap the standard validator with additional validation that ensures the
 	// core claims (including validity periods) are present
 	tokenValidator := registeredClaimsValidator(jwtValidator.ValidateToken)
 
-	return jwtmiddleware.New(tokenValidator, options...).CheckJWT, nil
-}
+	validationMiddleware := jwtmiddleware.New(tokenValidator, options...).CheckJWT
 
-func LogErrorHandler() jwtmiddleware.ErrorHandler {
-	return func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Warn().
-			Err(err).
-			Msg("JWT decode failure")
+	subChain := alice.New(validationMiddleware, auditClaimsMiddleware()).Then
 
-		jwtmiddleware.DefaultErrorHandler(w, r, err)
-	}
+	return subChain, nil
 }
 
 // ContextWithClaims returns a new context.Context with the provided validated claims
@@ -101,6 +104,40 @@ func RequireBuildkiteClaimsFromContext(ctx context.Context) BuildkiteClaims {
 	}
 
 	return *c
+}
+
+func auditClaimsMiddleware() func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			entry := audit.Log(r.Context())
+			claims := ClaimsFromContext(r.Context())
+
+			if claims == nil {
+				entry.Error = "JWT claims missing from context"
+			} else {
+				reg := claims.RegisteredClaims
+				entry.Authorized = true
+				entry.AuthSubject = reg.Subject
+				entry.AuthIssuer = reg.Issuer
+				entry.AuthAudience = reg.Audience
+				entry.AuthExpirySecs = reg.Expiry
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func auditErrorHandler() jwtmiddleware.ErrorHandler {
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		entry := audit.Log(r.Context())
+		entry.Error = fmt.Sprintf("JWT authorization failure: %s", err.Error())
+
+		// The default error handler will write the appropriate response status
+		// code. The status code is recorded centrally by the central audit
+		// middleware.
+		jwtmiddleware.DefaultErrorHandler(w, r, err)
+	}
 }
 
 type KeyFunc = func(ctx context.Context) (any, error)

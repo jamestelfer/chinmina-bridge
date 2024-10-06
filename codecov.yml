@@ -1,6 +1,8 @@
 ignore:
   # testing utility
   - "cmd/create"
+  # has sufficient secondary coverage
+  - "internal/audit/response.go"
   # telemetry configuration
   - "internal/observe/telemetry.go"
   # bootstrap only
