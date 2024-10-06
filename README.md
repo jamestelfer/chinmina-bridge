@@ -145,6 +145,11 @@ To understand what's right for your organization, consider:
   - it's OK if your organization controls the creation/configuration of
     pipelines: this restricts the opportunity to misconfigure a pipeline.
 
+## Operations
+
+See the [observability documentation](./docs/observability.md) for more details
+on the information provided by the system when running.
+
 ## Configuration
 
 Requirements:
